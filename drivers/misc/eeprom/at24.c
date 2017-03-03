@@ -9,6 +9,7 @@
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
  */
+// update 2017.3.1 add function　at24_find_devices()
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/module.h>
@@ -122,7 +123,8 @@ static const struct i2c_device_id at24_ids[] = {
 	{ "24c32", AT24_DEVICE_MAGIC(32768 / 8, AT24_FLAG_ADDR16) },
 	{ "24c64", AT24_DEVICE_MAGIC(65536 / 8, AT24_FLAG_ADDR16) },
 	{ "24c128", AT24_DEVICE_MAGIC(131072 / 8, AT24_FLAG_ADDR16) },
-	{ "24c256", AT24_DEVICE_MAGIC(262144 / 8, AT24_FLAG_ADDR16) },
+//	{ "24c256", AT24_DEVICE_MAGIC(262144 / 8, AT24_FLAG_ADDR16) },
+	{ "24c256", AT24_DEVICE_MAGIC(65536 / 8, AT24_FLAG_ADDR16) },	//2017.1.24
 	{ "24c512", AT24_DEVICE_MAGIC(524288 / 8, AT24_FLAG_ADDR16) },
 	{ "24c1024", AT24_DEVICE_MAGIC(1048576 / 8, AT24_FLAG_ADDR16) },
 	{ "at24", 0 },
@@ -185,6 +187,8 @@ static ssize_t at24_eeprom_read(struct at24_data *at24, char *buf,
 	if (count > io_limit)
 		count = io_limit;
 
+	dev_dbg(&client->dev, "at24->use_smbus=%d",at24->use_smbus);
+
 	switch (at24->use_smbus) {
 	case I2C_SMBUS_I2C_BLOCK_DATA:
 		/* Smaller eeproms can work given some SMBus extension calls */
@@ -210,6 +214,7 @@ static ssize_t at24_eeprom_read(struct at24_data *at24, char *buf,
 			msgbuf[i++] = offset >> 8;
 		msgbuf[i++] = offset;
 
+		dev_dbg(&client->dev, "client->addr=%x",client->addr);
 		msg[0].addr = client->addr;
 		msg[0].buf = msgbuf;
 		msg[0].len = i;
@@ -479,6 +484,137 @@ static void at24_get_ofdata(struct i2c_client *client,
 { }
 #endif /* CONFIG_OF */
 
+//update 2017.3.1
+static int at24_find_devices(struct i2c_client *client, const struct i2c_device_id *id, struct at24_data *at24)
+{
+	int jump_inc,ret_at24_read,err, tmp_ssize,cnt_s, start_cnt;
+	unsigned num_addresses;
+	char tmp_data,test_data,comp_data, comp_data_half,tmp_data_8, comp_data_8;
+	kernel_ulong_t magic;
+
+	tmp_ssize = sizeof(at24_ids) / sizeof(at24_ids[0]);
+
+	magic = at24_ids[2].driver_data;
+	at24->chip.byte_len = BIT(magic & AT24_BITMASK(AT24_SIZE_BYTELEN));
+	magic >>= AT24_SIZE_BYTELEN;
+	at24->chip.flags = (magic & AT24_BITMASK(AT24_SIZE_FLAGS) );
+	dev_dbg(&client->dev, " at24->chip.byte_len:%x \n", at24->chip.byte_len);
+
+	at24_get_ofdata(client, &at24->chip);
+
+	at24->bin.size = at24->chip.byte_len;
+
+	i2c_set_clientdata(client, at24);
+
+	tmp_data_8 = 0;
+	ret_at24_read = at24_read(at24,&tmp_data_8, 0 ,1);
+
+	at24->chip.flags |= AT24_FLAG_ADDR16;
+	tmp_data = 0;
+	ret_at24_read = at24_read(at24,&tmp_data,at24->bin.size-1,1);
+	dev_dbg(&client->dev, "at24_read:%x \n", ret_at24_read);
+
+	test_data=0x5a;
+	at24_write(at24,&test_data,at24->bin.size-1,1);
+
+	comp_data=0;
+	ret_at24_read = at24_read(at24,&comp_data,at24->bin.size-1,1);
+
+	dev_dbg(&client->dev, "first test_data  %x == comp_data  %x  \n", test_data, comp_data );
+
+	if(test_data != comp_data ){
+		at24->chip.flags &= ~AT24_FLAG_ADDR16;
+
+		ret_at24_read = at24_read(at24,&comp_data_8, 0 ,1);
+
+		if( tmp_data_8 != comp_data_8){
+			dev_dbg(&client->dev, "first  tmp_data_8 %x ==  comp_data_8 %x  \n", tmp_data_8, comp_data_8 );
+
+			at24_write(at24,&tmp_data_8,0,1);
+		}
+		start_cnt =  6;
+	}else{
+		at24_write(at24,&tmp_data,at24->bin.size-1,1);
+
+		start_cnt =  tmp_ssize-3;
+	}
+	jump_inc = 0;
+	dev_dbg(&client->dev, "start_cnt %d\n",start_cnt );
+	for (cnt_s = start_cnt;cnt_s >= 0 ;cnt_s--){
+
+		magic = at24_ids[cnt_s].driver_data;
+		at24->chip.byte_len = BIT(magic & AT24_BITMASK(AT24_SIZE_BYTELEN));
+		magic >>= AT24_SIZE_BYTELEN;
+		at24->chip.flags = magic & AT24_BITMASK(AT24_SIZE_FLAGS);
+
+		dev_dbg(&client->dev, "size %d byte list %d \n" , at24->chip.byte_len, cnt_s);
+
+		at24_get_ofdata(client, &at24->chip);
+
+		if (at24->chip.flags & AT24_FLAG_TAKE8ADDR){
+			dev_dbg(&client->dev, "continue TAKE8ADDR\n");
+			continue;
+		}else if(at24->chip.flags & (AT24_FLAG_READONLY | AT24_FLAG_IRUGO)){
+			dev_dbg(&client->dev, "continue FLAG_READONLY\n");
+			continue;
+		}else{
+			num_addresses =	DIV_ROUND_UP(at24->chip.byte_len,
+					(at24->chip.flags & AT24_FLAG_ADDR16) ? 65536 : 256);
+			dev_dbg(&client->dev, "num_addresses %d at24->num_addresses %d\n",num_addresses,at24->num_addresses );
+			if( at24->num_addresses < num_addresses ){
+				continue;
+			}
+		}
+		at24->bin.size = at24->chip.byte_len;
+		dev_dbg(&client->dev, "at24->chip.byte_len:%d\n",at24->chip.byte_len );
+
+		err = sysfs_create_bin_file(&client->dev.kobj, &at24->bin);
+		dev_dbg(&client->dev, "err=%d\n",err );
+		if (err){
+			dev_dbg(&client->dev, "Error sysfs \n" );
+			return 1;
+		}else{
+			dev_dbg(&client->dev, "Success  Sysfs \n" );
+		}
+		i2c_set_clientdata(client, at24);
+
+		tmp_data = 0;
+		ret_at24_read = at24_read(at24,&tmp_data,at24->bin.size-1,1);
+		dev_dbg(&client->dev, "ret_at24_read %x \n", ret_at24_read);
+
+		test_data=0x5a;
+		ret_at24_read = at24_write(at24,&test_data,at24->bin.size-1,1);
+		dev_dbg(&client->dev, " write end %x \n", ret_at24_read);
+
+		comp_data=0;
+		ret_at24_read = at24_read(at24,&comp_data,at24->bin.size-1,1);
+		dev_dbg(&client->dev, "test_data %x == comp_data %x  (ret %x)\n", test_data, comp_data , ret_at24_read);
+
+		ret_at24_read = at24_read(at24,&comp_data_half,(at24->bin.size /2 )-1,1);
+		dev_dbg(&client->dev, "half value == %x (ret %x)\n", comp_data_half, ret_at24_read);
+		dev_dbg(&client->dev, "test_data = %x,comp_data = %x,comp_data_half = %x\n", test_data,comp_data,comp_data_half);
+
+		if(test_data == comp_data &&
+				comp_data != comp_data_half
+		){
+			at24_write(at24,&tmp_data,at24->bin.size-1,1);
+			break;
+		}
+		sysfs_remove_bin_file(&client->dev.kobj, &at24->bin);
+		i2c_set_clientdata(client, NULL);
+	}
+	if(cnt_s < 0){
+		dev_dbg(&client->dev, "not found list.\n" );
+		return 2;
+	}else{
+		memset(&client->name[0], 0x00, sizeof(client->name));
+		strncpy(client->name, at24_ids[cnt_s].name, strlen(at24_ids[cnt_s].name));
+		at24->client[0] = client;
+	}
+
+	return 0;
+}
+
 static int at24_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct at24_platform_data chip;
@@ -565,6 +701,8 @@ static int at24_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	at24->chip = chip;
 	at24->num_addresses = num_addresses;
 
+	dev_dbg(&client->dev, "chip.byte_len %zu byte , at24->num_addresses %d\n",
+			chip.byte_len, at24->num_addresses);
 	/*
 	 * Export the EEPROM bytes through sysfs, since that's convenient.
 	 * By default, only root should see the data (maybe passwords etc)
@@ -621,12 +759,24 @@ static int at24_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		}
 	}
 
-	err = sysfs_create_bin_file(&client->dev.kobj, &at24->bin);
-	if (err)
-		goto err_clients;
+	//update 2017.3.1
+	if (at24->bin.size == (1024 * 1024) / 8){
 
-	i2c_set_clientdata(client, at24);
+		err = at24_find_devices(client, id, at24); 		//update 2017.3.1
+		dev_dbg(&client->dev, "err=%d \n",err );
+		if (err){
+			goto err_clients;
+		}
 
+	}else{
+		err = sysfs_create_bin_file(&client->dev.kobj, &at24->bin);
+		dev_dbg(&client->dev, "err=%d\n",err );
+		if (err){
+			dev_dbg(&client->dev, "Error sysfs \n" );
+			goto err_clients;
+		}
+		i2c_set_clientdata(client, at24);
+	}
 	dev_info(&client->dev, "%zu byte %s EEPROM, %s, %u bytes/write\n",
 		at24->bin.size, client->name,
 		writable ? "writable" : "read-only", at24->write_max);

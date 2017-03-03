@@ -54,6 +54,7 @@
 // update 2016.10.31 Ver.2.0.0 print the CONPROSYS build Version
 // update 2016.12.16 Ver.2.0.1 Change UART5 DTR Signal is high level.
 // update 2016.12.27 Ver.2.0.2 Change omap_serial.c (Not change this source.)
+// update 2017.3.1 Ver.2.0.3 Change static struct at24_platform_data mc341_baseboard_eeprom_info
 //#define MC341LAN2 (1)
 #define MC341
 #ifndef MC341
@@ -62,7 +63,7 @@
 #endif
 
 // update 2016.10.31
-#define CPS_KERNEL_VERSION "Ver.2.0.2 (build: 2016/12/27) "
+#define CPS_KERNEL_VERSION "Ver.2.0.3 (build: 2017/3/1) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -2053,11 +2054,13 @@ static struct at24_platform_data mc341_daughter_board_eeprom_info = {
 };
 */
 // I2C BUS 2Kbit(256x8bit) EEPROM - BR24L02F-W 
+// update 2017.3.1
 static struct at24_platform_data mc341_baseboard_eeprom_info = {
-	.byte_len       = (256*8) / 8,
+//	.byte_len       = (256*8) / 8,
+	.byte_len       = (1024*1024) / 8,
 	.page_size      = 8,
-	// .flags          = AT24_FLAG_ADDR16, // 2015.01.16
-	.flags          = 0,
+	.flags          = AT24_FLAG_ADDR16, // 2015.01.16
+	//.flags          = 0,
 	.setup          = mc341_setup,
 	.context        = (void *)NULL,
 };
