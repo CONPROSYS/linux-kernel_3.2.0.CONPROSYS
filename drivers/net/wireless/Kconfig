@@ -218,6 +218,11 @@ config USB_NET_RNDIS_WLAN
 	  If you choose to build a module, it'll be called rndis_wlan.
 
 source "drivers/net/wireless/rtl818x/Kconfig"
+# update 2016.12.21 Add Realtek 8188E USB WiFi
+source "drivers/net/wireless/8188eu-v4.3.0.8_13968/Kconfig"
+
+# update 2016.12.21 Add Realtek 8192E USB WiFi
+source "drivers/net/wireless/rtl8192e/Kconfig"
 
 config ADM8211
 	tristate "ADMtek ADM8211 support"
@@ -291,5 +296,4 @@ source "drivers/net/wireless/wl1251/Kconfig"
 source "drivers/net/wireless/wl12xx/Kconfig"
 source "drivers/net/wireless/zd1211rw/Kconfig"
 source "drivers/net/wireless/mwifiex/Kconfig"
-
 endif # WLAN

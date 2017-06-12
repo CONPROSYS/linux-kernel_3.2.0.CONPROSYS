@@ -26,7 +26,7 @@
 #include <linux/completion.h>
 #include <linux/pm_runtime.h>
 
-#include <mach/board-am335xevm.h>
+#include <mach/board-mc341.h>
 #include <plat/prcm.h>
 #include <plat/mailbox.h>
 #include <plat/sram.h>
@@ -519,7 +519,7 @@ static int __init am33xx_pm_init(void)
 
 
 	/* Get Board Id */
-	evm_id = am335x_evm_get_id();
+	evm_id = mc341_get_id();
 	if (evm_id != -EINVAL)
 		suspend_cfg_param_list[EVM_ID] = evm_id;
 	else

@@ -35,7 +35,7 @@
 // update 2015.07.03 option enable dcan (disable uart1)
 //                   update Kconfig
 // update 2015.08.20 gpmc add (word access/ byte access) fixed.
-//	update 2015.09.01 add MC341B-40 
+// update 2015.09.01 add MC341B-40
 // update 2015.09.10 gpio1_7 output (with MC341B-40) 
 //	                  spi0_slave_info added (with MC341B-40)
 // update 2015.10.01 spi1 digital potentiometer (with MC341B-40)
@@ -53,8 +53,16 @@
 //                   (2) Add the Checking of GPIO-IN <GPIO(2,23) > for CPS-MCS341-DS1.
 // update 2016.10.31 Ver.2.0.0 print the CONPROSYS build Version
 // update 2016.12.16 Ver.2.0.1 Change UART5 DTR Signal is high level.
+// update 2016.12.22 Ver.2.1.0 (1) Add Realtek 8188E USB WiFi.
 // update 2016.12.27 Ver.2.0.2 Change omap_serial.c (Not change this source.)
-// update 2017.3.1 Ver.2.0.3 Change static struct at24_platform_data mc341_baseboard_eeprom_info
+// update 2017.02.20 Ver.2.1.1 (1) pm33xx.c change file.
+// update 2017.03.01 Ver.2.0.3 Change static struct at24_platform_data mc341_baseboard_eeprom_info
+// update 2017.03.03 Ver.2.1.2 Ver 2.0.3 and Ver.2.1.1 Merge commit.
+// update 2017.03.17 Ver.2.1.3 hwclock --showを実行するとtimeoutが発生する不具合の修正を追加 (rtc-rx8900.c)
+// update 2017.04.12 Ver.2.1.4 Change SD Card insert card-detect and write-protect.
+// update 2017.04.28 Ver.2.1.5 add USB-WiFi(WN-G300UA,USB-N10 NANO)
+// update 2017.05.19 Ver.2.1.6 add USB-WiFi(NetGear　WNA3100M)
+// update 2017.05.25 Ver.2.1.7 Change set UART5 RTS/CTS/TXD/RXD pin,again.(This bug is occured from Ver.2.0.1 or later(without Ver.2.1.1) )
 //#define MC341LAN2 (1)
 #define MC341
 #ifndef MC341
@@ -62,8 +70,8 @@
 */
 #endif
 
-// update 2016.10.31
-#define CPS_KERNEL_VERSION "Ver.2.0.3 (build: 2017/3/1) "
+// update 2017.05.25
+#define CPS_KERNEL_VERSION "Ver.2.1.7 (build: 2017/05/25) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -202,7 +210,7 @@
 #endif
 
 
-#define BEAGLEBONE_LCD_AVDD_EN GPIO_TO_PIN(0, 7)
+//#define BEAGLEBONE_LCD_AVDD_EN GPIO_TO_PIN(0, 7)
 #define BEAGLEBONE_LCD_BL GPIO_TO_PIN(1, 18)
 
 #define AM33XX_CTRL_REGADDR(reg)				\
@@ -249,8 +257,9 @@ static struct omap2_hsmmc_info mc341_mmc[] __initdata = {
 	{
 		.mmc            = 1,
 		.caps           = MMC_CAP_4_BIT_DATA,
-		.gpio_cd        = GPIO_TO_PIN(0, 6),
-		.gpio_wp        = GPIO_TO_PIN(3, 18),
+		.gpio_cd        = GPIO_TO_PIN(0, 6),// 2017.04.12
+//		.gpio_wp        = GPIO_TO_PIN(3, 18),// 2017.04.12
+		.gpio_wp        = GPIO_TO_PIN(0, 7),
 		.ocr_mask       = MMC_VDD_32_33 | MMC_VDD_33_34, /* 3V3 */
 	},
 	{
@@ -560,13 +569,16 @@ static struct pinmux_config mmc0_common_pin_mux[] = {
 	{NULL, 0},
 };
 
-// static struct pinmux_config mmc0_wp_only_pin_mux[] = {
+static struct pinmux_config mmc0_wp_only_pin_mux[] = {
 //	{"ecap0_in_pwm0_out.mmc0_sdwp", OMAP_MUX_MODE5 | AM33XX_PIN_INPUT_PULLUP},
-//	{NULL, 0},
-// };
+		{"ecap0_in_pwm0_out.gpio0_7", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
+};
 
 static struct pinmux_config mmc0_cd_only_pin_mux[] = {
-	{"spi0_cs1.mmc0_sdcd",  OMAP_MUX_MODE5 | AM33XX_PIN_INPUT_PULLUP},
+
+//	{"spi0_cs1.mmc0_sdcd",  OMAP_MUX_MODE5 | AM33XX_PIN_INPUT_PULLUP},
+	{"spi0_cs1.gpio0_6",  OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
 	{NULL, 0},
 };
 
@@ -1131,6 +1143,7 @@ static void mmc0_init(int evm_id, int profile)
 */
 	setup_pin_mux(mmc0_common_pin_mux);
 	setup_pin_mux(mmc0_cd_only_pin_mux);
+	setup_pin_mux(mmc0_wp_only_pin_mux);// 2017.04.12
 
 	omap2_hsmmc_init(mc341_mmc);
 	return;
@@ -1721,22 +1734,25 @@ static void setup_starterkit(void)
 	setup_pin_mux(uart5_rs485_pin_mux);
 #elif defined(CONFIG_MACH_MC342B20)
 	setup_pin_mux(ec341_uart5_pin_mux);
-#elif defined(CONFIG_MACH_MC341B10)
-	//update 2016.09.29 (1) GPIO ( DCD, RI, DTR, DSR ) set
-	setup_pin_mux(uart5_rs232c_pin_mux); // GPIO ( DCD, RI, DTR, DSR )
-	//update 2016.12.16 GPIO DTR sets high.
-
-	#define GPIO_UART5_DTR_PIN GPIO_TO_PIN(1, 12)
-	ret = gpio_request(GPIO_UART5_DTR_PIN, "GPIO_UART5_DTR_PIN");
-	if (!ret) {
-		gpio_direction_output(GPIO_UART5_DTR_PIN, 1);
-	}else{
-		printk(KERN_ERR "%s: failed to request GPIO for GPIO_UART5_DTR_PIN port "
-           "gpio control: %d\n", __func__, ret);
-	}
 #else
 	// uart5 RS232C type
 	setup_pin_mux(uart5_pin_mux);
+
+	//update 2017.05.25 (1) RS232C sets RTS/CTS/TXD/RXD pin, again.
+	#if defined(CONFIG_MACH_MC341B10)
+		//update 2016.09.29 (1) GPIO ( DCD, RI, DTR, DSR ) set
+		setup_pin_mux(uart5_rs232c_pin_mux); // GPIO ( DCD, RI, DTR, DSR )
+		//update 2016.12.16 GPIO DTR sets high.
+
+		#define GPIO_UART5_DTR_PIN GPIO_TO_PIN(1, 12)
+		ret = gpio_request(GPIO_UART5_DTR_PIN, "GPIO_UART5_DTR_PIN");
+		if (!ret) {
+			gpio_direction_output(GPIO_UART5_DTR_PIN, 1);
+		}else{
+			printk(KERN_ERR "%s: failed to request GPIO for GPIO_UART5_DTR_PIN port "
+           "gpio control: %d\n", __func__, ret);
+		}
+	#endif
 #endif
 
 #if !defined(CONFIG_MACH_MC342B20)	// MCx Series only

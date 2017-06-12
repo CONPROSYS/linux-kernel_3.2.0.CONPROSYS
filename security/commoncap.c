@@ -6,7 +6,7 @@
  *	(at your option) any later version.
  *
  */
-
+// update 2017.03.13
 #include <linux/capability.h>
 #include <linux/audit.h>
 #include <linux/module.h>
@@ -31,6 +31,9 @@
 
 #ifdef CONFIG_ANDROID_PARANOID_NETWORK
 #include <linux/android_aid.h>
+#else // update 2017.03.13
+#define AID_NET_RAW 3004
+#define AID_NET_ADMIN 3005
 #endif
 
 /*

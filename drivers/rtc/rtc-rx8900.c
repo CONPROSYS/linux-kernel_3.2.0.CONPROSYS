@@ -32,6 +32,7 @@
 // 2016.06.07 add client_initialize battery set/unset checker.
 // 2016.10.27(1) Change IRQ TYPE
 //           (2) Change update interrupt from 1sec to 1min.
+// 2017.03.17 hwclock --showを実行するとtimeoutが発生する不具合の修正を追加
 #if 0
 #define DEBUG
 #include <linux/device.h>
@@ -41,8 +42,12 @@
 // update 2016.10.27(1) Change IRQ TYPE
 #if CONFIG_CONTEC_MC34X
 #define RX8900_IRQ_FLAGS	( IRQF_TRIGGER_FALLING | IRQF_ONESHOT )
+
+#define RX8900_BTC_RAM_USED_USEL_CALLED_HWCLOCK	0x01
 #else
 #define RX8900_IRQ_FLAGS	( IRQF_TRIGGER_LOW | IRQF_ONESHOT )
+
+#define RX8900_BTC_RAM_USED_USEL_CALLED_HWCLOCK	0x00
 #endif
 
 #include <linux/kernel.h>
@@ -60,7 +65,10 @@
 #include <linux/of_irq.h>
 #include <linux/interrupt.h>
 #include <linux/input.h>
-	
+#include <linux/delay.h>
+
+
+static int rx8900_check_reg(struct i2c_client *client, u8 number, u8 flags, u8 mask, char reg_name[]);
 
 // RX-8900 Basic Time and Calendar Register definitions
 #define RX8900_BTC_SEC					0x00
@@ -256,7 +264,7 @@ static void rx8900_work(struct work_struct *work)
 	struct i2c_client *client = rx8900->client;
 	struct mutex *lock = &rx8900->rtc->ops_lock;
 	u8 flags;
-
+	u8 isChangeAlarm;
 	mutex_lock(lock);
 	
 	if (rx8900_read_reg(client, RX8900_BTC_FLAG, &flags))
@@ -278,7 +286,8 @@ static void rx8900_work(struct work_struct *work)
 	if (flags & RX8900_BTC_FLAG_TF) { 
 		flags &= ~RX8900_BTC_FLAG_TF; 
 		local_irq_disable();
-		rtc_update_irq(rx8900->rtc, 1, RTC_PF);// | RTC_IRQF);
+//		rtc_update_irq(rx8900->rtc, 1, RTC_PF);// | RTC_IRQF);
+		rtc_update_irq(rx8900->rtc, 1, RTC_PF | RTC_IRQF);
 		local_irq_enable();
 		dev_dbg(&client->dev, "%s: fixed-cycle timer function status: %xh\n", __func__, flags);
 	}
@@ -287,7 +296,8 @@ static void rx8900_work(struct work_struct *work)
 	if (flags & RX8900_BTC_FLAG_AF) { 
 		flags &= ~RX8900_BTC_FLAG_AF; 
 		local_irq_disable();
-		rtc_update_irq(rx8900->rtc, 1, RTC_AF);// | RTC_IRQF);
+//		rtc_update_irq(rx8900->rtc, 1, RTC_AF);// | RTC_IRQF);
+		rtc_update_irq(rx8900->rtc, 1, RTC_AF | RTC_IRQF);
 		local_irq_enable();
 		dev_dbg(&client->dev, "%s: alarm function status: %xh\n", __func__, flags);
 	}
@@ -296,8 +306,25 @@ static void rx8900_work(struct work_struct *work)
 	if (flags & RX8900_BTC_FLAG_UF) { 
 		flags &= ~RX8900_BTC_FLAG_UF; 
 		local_irq_disable();
-		rtc_update_irq(rx8900->rtc, 1, RTC_UF);// | RTC_IRQF);
+//		rtc_update_irq(rx8900->rtc, 1, RTC_UF);// | RTC_IRQF);
+		rtc_update_irq(rx8900->rtc, 1, RTC_UF | RTC_IRQF);
 		local_irq_enable();
+
+		rx8900_read_reg(rx8900->client, RX8900_BTC_RAM, &isChangeAlarm);
+
+		if( isChangeAlarm & RX8900_BTC_RAM_USED_USEL_CALLED_HWCLOCK ){
+
+			rx8900_write_reg(rx8900->client, RX8900_BTC_RAM, isChangeAlarm & ~(0x01) );
+			rx8900_check_reg(
+					rx8900->client,
+					RX8900_BTC_EXT,
+					(u8)(RX8900_BTC_EXT_USEL),
+					0xff,
+					"RX8900_BTC_EXT"
+			);
+
+		}
+
 		dev_dbg(&client->dev, "%s: time update function status: %xh\n", __func__, flags);
 	}
 
@@ -548,7 +575,8 @@ static int rx8900_set_alarm(struct device *dev, struct rtc_wkalrm *t)
 	u8 alarmvals[3];		//minute, hour, day
 	u8 ctrl[2];				//ext, flag registers
 	int err;
- 
+	u8 uselEnable = 0;
+
 	if (client->irq <= 0)
 		return -EINVAL;
 			
@@ -558,9 +586,26 @@ static int rx8900_set_alarm(struct device *dev, struct rtc_wkalrm *t)
 		t->time.tm_mday, t->time.tm_mon, t->time.tm_year);
 			
 	//get current flag register
-	err = rx8900_read_regs(client, RX8900_BTC_FLAG, 2, ctrl);
+	err = rx8900_read_regs(client, RX8900_BTC_EXT, 2, ctrl);
 	if (err <0)
 		return err;
+
+	//2017.03.17
+	if( ctrl[0] & RX8900_BTC_EXT_USEL ){
+		uselEnable = 1;
+		err = rx8900_write_reg(rx8900->client, RX8900_BTC_EXT, (ctrl[0] & ~(RX8900_BTC_EXT_USEL)) );
+		if (err)
+			return err;
+		//rx8900_write_reg(rx8900->client, RX8900_BTC_RAM, 1);
+		rx8900_check_reg(
+				rx8900->client,
+				RX8900_BTC_RAM,
+				(u8)(RX8900_BTC_RAM_USED_USEL_CALLED_HWCLOCK),
+				0xff,
+				"RX8900_BTC_RAM"
+		);
+
+	}
 
 	// Hardware alarm precision is 1 minute
 	alarmvals[0] = bin2bcd(t->time.tm_min);
@@ -603,11 +648,13 @@ static int rx8900_set_alarm(struct device *dev, struct rtc_wkalrm *t)
 	//re-enable interrupt if required
 	if (t->enabled) {
 		//set update interrupt enable
-		if ( rx8900->rtc->uie_rtctimer.enabled )
-			rx8900->ctrlreg |= RX8900_BTC_CTRL_UIE;	
+		if ( rx8900->rtc->uie_rtctimer.enabled ){
+			rx8900->ctrlreg |= RX8900_BTC_CTRL_UIE;
+		}
 		//set alarm interrupt enable
-		if ( rx8900->rtc->aie_timer.enabled )
+		if ( rx8900->rtc->aie_timer.enabled ){
 			rx8900->ctrlreg |= RX8900_BTC_CTRL_AIE | RX8900_BTC_CTRL_UIE;
+		}
 		
 		err = rx8900_write_reg(rx8900->client, RX8900_BTC_CTRL, rx8900->ctrlreg);
 		if (err)
@@ -697,7 +744,6 @@ static int rx8900_ioctl(struct device *dev, unsigned int cmd, unsigned long arg)
 	//struct rx8900_data *rx8900 = dev_get_drvdata(dev);
 	//struct mutex *lock = &rx8900->rtc->ops_lock;
 	int ret = 0;
-	//int tmp;
 	void __user *argp = (void __user *)arg;
 	reg_data reg;
 	dev_dbg(dev, "%s: cmd=%x\n", __func__, cmd);
@@ -777,7 +823,6 @@ static int rx8900_check_reg(struct i2c_client *client, u8 number, u8 flags, u8 m
 
 	dev_dbg(&client->dev, "%s: REG[0x%02x] => 0x%02x\n", __func__,number, val);
 	dev_info(&client->dev, "%s read reg[%x]\n", reg_name, val );
-	if( (val & flags) != flags ){
 		val = (val | flags) & mask ;
 
 		dev_info(&client->dev, "%s write reg[%x]\n", reg_name, val );
@@ -786,7 +831,6 @@ static int rx8900_check_reg(struct i2c_client *client, u8 number, u8 flags, u8 m
 			dev_err(&client->dev, "unable to write %s function\n", reg_name);
 			return err;
 		}
-	}
 
 	return err;
 }
@@ -884,39 +928,81 @@ static int rx8900_probe(struct i2c_client *client, const struct i2c_device_id *i
 	);
 	if(err)
 		goto errout_reg;
-	// 2015.06.12 for Compensation interval Select 0,1(2sec->30sec)
-	/*
-	{
-		u8 val;
-		err=rx8900_read_reg(client, RX8900_BTC_CTRL, &val);
-		if (err) {
-			dev_err(&client->dev, "unable to read BTC_CTRL function\n");
-			goto errout_reg;
-		}else{
-			dev_dbg(&client->dev, "%s: REG[0x%02x] => 0x%02x\n", __func__, RX8900_BTC_CTRL, val);
-			dev_info(&client->dev, "RX8900_BTC_CTRL read reg[%x]\n", val );
-			if( (val & RX8900_BTC_CTRL_CSEL1) == 0 || (val & RX8900_BTC_CTRL_CSEL0) == 0 ){
-				val |= RX8900_BTC_CTRL_CSEL1; // CSEL1
-				val |= RX8900_BTC_CTRL_CSEL0; // CSEL0
-				dev_info(&client->dev, "RX8900_BTC_CTRL write reg[%x]\n", val );
-				err=rx8900_write_reg(client, RX8900_BTC_CTRL, 0xff & val);
-				if (err) {
-					dev_err(&client->dev, "unable to write BTC_CTRL function\n");
-					goto errout_reg;
-				}
-			}
-		}
-	}
-	*/
+
+//	// 2016.10.27(2) Change update interrupt from 1sec to 1min.
+	err = rx8900_check_reg(
+			client,
+			RX8900_BTC_EXT,
+			0,
+			(u8)~(RX8900_BTC_EXT_USEL | RX8900_BTC_EXT_TEST | RX8900_BTC_EXT_TE | RX8900_BTC_EXT_TSEL1 | RX8900_BTC_EXT_TSEL0),
+			"RX8900_BTC_EXT"
+	);
+	if(err)
+		goto errout_reg;
+
+	// 2017.03.17
+	err = rx8900_check_reg(
+			client,
+			RX8900_BTC_FLAG,
+			0,
+			(u8)~(RX8900_BTC_FLAG_UF | RX8900_BTC_FLAG_TF),
+			"RX8900_BTC_FLAG"
+	);
+	if(err)
+		goto errout_reg;
+
+//		2015.06.12 for Compensation interval Select 0,1(2sec->30sec)
+//	/*
+//	{
+//		u8 val;
+//		err=rx8900_read_reg(client, RX8900_BTC_CTRL, &val);
+//		if (err) {
+//			dev_err(&client->dev, "unable to read BTC_CTRL function\n");
+//			goto errout_reg;
+//		}else{
+//			dev_dbg(&client->dev, "%s: REG[0x%02x] => 0x%02x\n", __func__, RX8900_BTC_CTRL, val);
+//			dev_info(&client->dev, "RX8900_BTC_CTRL read reg[%x]\n", val );
+//			if( (val & RX8900_BTC_CTRL_CSEL1) == 0 || (val & RX8900_BTC_CTRL_CSEL0) == 0 ){
+//				val |= RX8900_BTC_CTRL_CSEL1; // CSEL1
+//				val |= RX8900_BTC_CTRL_CSEL0; // CSEL0
+//				dev_info(&client->dev, "RX8900_BTC_CTRL write reg[%x]\n", val );
+//				err=rx8900_write_reg(client, RX8900_BTC_CTRL, 0xff & val);
+//				if (err) {
+//					dev_err(&client->dev, "unable to write BTC_CTRL function\n");
+//					goto errout_reg;
+//				}
+//			}
+//		}
+//	}
+//	*/
+//	err = rx8900_check_reg(
+//			client,
+//			RX8900_BTC_CTRL,
+//			(u8)(RX8900_BTC_CTRL_CSEL1 | RX8900_BTC_CTRL_CSEL0),
+//			(u8)~(RX8900_BTC_CTRL_AIE | RX8900_BTC_CTRL_TIE),
+//			"RX8900_BTC_CTRL"
+//	);
+//	if(err)
+//		goto errout_reg;
+//
+//	rx8900->ctrlreg |= (
+//			( RX8900_BTC_CTRL_CSEL1 | 	RX8900_BTC_CTRL_CSEL0) &
+//				~(RX8900_BTC_CTRL_AIE | 	RX8900_BTC_CTRL_TIE)
+//			); // debug
+
 	err = rx8900_check_reg(
 			client,
 			RX8900_BTC_CTRL,
 			(u8)(RX8900_BTC_CTRL_CSEL1 | RX8900_BTC_CTRL_CSEL0),
-			0xff,
+			(u8)~(RX8900_BTC_CTRL_UIE |RX8900_BTC_CTRL_AIE | RX8900_BTC_CTRL_TIE),
 			"RX8900_BTC_CTRL"
 	);
 	if(err)
 		goto errout_reg;
+
+	rx8900->ctrlreg |= ( RX8900_BTC_CTRL_CSEL1 | 	RX8900_BTC_CTRL_CSEL0);
+	rx8900->ctrlreg &=~(RX8900_BTC_CTRL_UIE |RX8900_BTC_CTRL_AIE | 	RX8900_BTC_CTRL_TIE); // debug
+
 	// 2016.10.27(2) Change update interrupt from 1sec to 1min.
 	err = rx8900_check_reg(
 			client,
