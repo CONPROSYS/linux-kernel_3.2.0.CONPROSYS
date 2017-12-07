@@ -1,0 +1,61 @@
+/*
+ *  linux/drivers/char/watchdog/am335x_wdt.h
+ *
+ *  BRIEF MODULE DESCRIPTION
+ *      Texas Instruments AM335x Watchdog timer register definitions
+ *
+ *  Copyright (C) 2017 CONTEC CO.Ltd.
+ *
+ *  This program is free software; you can redistribute  it and/or modify it
+ *  under  the terms of  the GNU General  Public License as published by the
+ *  Free Software Foundation;  either version 2 of the  License, or (at your
+ *  option) any later version.
+ *
+ *  THIS  SOFTWARE  IS PROVIDED   ``AS  IS'' AND   ANY  EXPRESS OR IMPLIED
+ *  WARRANTIES,   INCLUDING, BUT NOT  LIMITED  TO, THE IMPLIED WARRANTIES OF
+ *  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN
+ *  NO  EVENT  SHALL   THE AUTHOR  BE    LIABLE FOR ANY   DIRECT, INDIRECT,
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ *  NOT LIMITED   TO, PROCUREMENT OF  SUBSTITUTE GOODS  OR SERVICES; LOSS OF
+ *  USE, DATA,  OR PROFITS; OR  BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ *  ANY THEORY OF LIABILITY, WHETHER IN  CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ *  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *  You should have received a copy of the  GNU General Public License along
+ *  with this program; if not, write  to the Free Software Foundation, Inc.,
+ *  675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+
+#ifndef _AM335X_WATCHDOG_H
+#define _AM335X_WATCHDOG_H
+
+#include "omap_wdt.h"
+
+#define AM335X_WATCHDOG_REV	OMAP_WATCHDOG_REV	//(0x00)
+#define AM335X_WATCHDOG_SYS_CONFIG	OMAP_WATCHDOG_SYS_CONFIG	//(0x10)
+#define AM335X_WATCHDOG_STATUS	OMAP_WATCHDOG_STATUS		//(0x14)
+#define AM335X_WATCHDOG_ISR	(0x18)
+#define AM335X_WATCHDOG_IER	(0x1C)
+#define AM335X_WATCHDOG_CNTRL	OMAP_WATCHDOG_CNTRL	//(0x24)
+#define AM335X_WATCHDOG_CRR	OMAP_WATCHDOG_CRR	//(0x28)
+#define AM335X_WATCHDOG_LDR	OMAP_WATCHDOG_LDR	//(0x2C)
+#define AM335X_WATCHDOG_TGR	OMAP_WATCHDOG_TGR	//(0x30)
+#define AM335X_WATCHDOG_WPS	OMAP_WATCHDOG_WPS	//(0x34)
+#define AM335X_WATCHDOG_DLY	(0x44)
+#define AM335X_WATCHDOG_SPR	OMAP_WATCHDOG_SPR	//(0x48)
+#define AM335X_WATCHDOG_IRQ_STATUS_RAW	(0x54)
+#define AM335X_WATCHDOG_IRQ_STATUS	(0x58)
+#define AM335X_WATCHDOG_IRQ_ENABLE_SET	(0x5C)
+#define AM335X_WATCHDOG_IRQ_ENABLE_CLEAR	(0x60)
+
+#define AM335X_WATCHDOG_IRQ_ENABLE_DLY	(0x02)
+#define AM335X_WATCHDOG_IRQ_ENABLE_OVF	(0x01)
+
+#define AM335X_WATCHDOG_IRQ_MASK	(0x03)
+
+
+#define GET_WLDR_VAL_MSEC(msecs)	(0xffffffff - (((msecs) * (32768/(1<<PTV))) / 1000 ) + 1 )
+
+#endif				/* _AM335X_WATCHDOG_H */

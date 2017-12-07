@@ -16,6 +16,7 @@
 
 // update 2015.07.22 nmi
 // update 2015.10.01 spi1 cs3(mc341B40)
+// update 2017.07.22 Change wd_timer2 structure.( based sitara-linux-v3.2_AMSDK-06.00.00.00 )  
 
 #include <linux/io.h>
 #include <linux/slab.h>
@@ -3259,9 +3260,39 @@ static struct omap_hwmod am33xx_uart6_hwmod = {
 	.slaves_cnt	= ARRAY_SIZE(am33xx_uart6_slaves),
 };
 
+//update 2017.07.22
+static int mc341_watchdog_reset(struct omap_hwmod *oh)
+{
+	return 0;
+}
+
+static int mc341_watchdog_pre_shutdown(struct omap_hwmod *oh)
+{
+	return 0;
+}
+
+static struct omap_hwmod_class_sysconfig wdt_sysc = {
+	.rev_offs	= 0x0,
+	.sysc_offs	= 0x10,
+	.syss_offs	= 0x14,
+	.sysc_flags	= (SYSC_HAS_EMUFREE | SYSC_HAS_SIDLEMODE |
+			SYSC_HAS_SOFTRESET | SYSS_HAS_RESET_STATUS),
+	.idlemodes	= (SIDLE_FORCE | SIDLE_NO | SIDLE_SMART |
+			SIDLE_SMART_WKUP),
+	.sysc_fields	= &omap_hwmod_sysc_type1,
+};
+
+static struct omap_hwmod_irq_info am33xx_wd_timer_irqs[] = {
+	{.irq = AM33XX_IRQ_WDT1}, // IRQ 91
+	{.irq = -1},
+};
+
 /* 'wd_timer' class */
 static struct omap_hwmod_class am33xx_wd_timer_hwmod_class = {
 	.name		= "wd_timer",
+	.sysc		= &wdt_sysc,
+	.reset	= mc341_watchdog_reset,
+	.pre_shutdown	= mc341_watchdog_pre_shutdown,
 };
 
 static struct omap_hwmod_addr_space am33xx_wd_timer1_addrs[] = {
@@ -3293,6 +3324,7 @@ static struct omap_hwmod am33xx_wd_timer1_hwmod = {
 	.name		= "wd_timer2",
 	.class		= &am33xx_wd_timer_hwmod_class,
 	.clkdm_name	= "l4_wkup_clkdm",
+	.mpu_irqs	= am33xx_wd_timer_irqs, //update 2017.07.22
 	.main_clk	= "wdt1_fck",
 	.prcm		= {
 		.omap4	= {

@@ -63,6 +63,9 @@
 // update 2017.04.28 Ver.2.1.5 add USB-WiFi(WN-G300UA,USB-N10 NANO)
 // update 2017.05.19 Ver.2.1.6 add USB-WiFi(NetGear　WNA3100M)
 // update 2017.05.25 Ver.2.1.7 Change set UART5 RTS/CTS/TXD/RXD pin,again.(This bug is occured from Ver.2.0.1 or later(without Ver.2.1.1) )
+// update 2017.07.04 Ver.2.1.8 (1) Change sitara-linux-v3.2_AMSDK-06.00.00.00 source code.
+//                                 drivers/usb/musb all source codes.
+// update 2017.07.22           (1) Add mc341_restart function. ( watchdog　/reboot )
 //#define MC341LAN2 (1)
 #define MC341
 #ifndef MC341
@@ -70,8 +73,8 @@
 */
 #endif
 
-// update 2017.05.25
-#define CPS_KERNEL_VERSION "Ver.2.1.7 (build: 2017/05/25) "
+// update 2017.07.22
+#define CPS_KERNEL_VERSION "Ver.2.1.8 (build: 2017/07/22) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -2264,8 +2267,7 @@ static struct omap_musb_board_data musb_board_data = {
 	// .mode           = (MUSB_HOST << 4) | MUSB_OTG,
 	.mode           = (MUSB_HOST << 4) | MUSB_HOST,
 	.power		= 500,
-	//.instances	= 1,
-	.instances = 2,	//2016/04/15 change usb 2host mode!
+	.instances	= 1,
 };
 
 static int cpld_reg_probe(struct i2c_client *client,
@@ -2563,6 +2565,22 @@ static void __init mc341_map_io(void)
 	omapam33xx_map_common_io();
 }
 
+// update 2017.07.22 restart
+void mc341_restart(char mode, const char *cmd)
+{
+	int ret;
+
+	#define GPIO_RESET_POUT GPIO_TO_PIN( 3, 9 )		//GPIO 105
+	gpio_free(GPIO_RESET_POUT);
+	ret = gpio_request(GPIO_RESET_POUT, "GPIO_RESET_POUT");
+	if (!ret) {
+		gpio_direction_output(GPIO_RESET_POUT, 1);
+	}else{
+		pr_err("%s: failed to request GPIO for GPIO_RESET_POUT port "
+					"gpio control: %d\n", __func__, ret);
+	}
+}
+
 // CPS-MC341-ADSCn
 MACHINE_START(MC341B10, "mc341b10")
 	// Maintainer: CONTEC Co.,Ltd.
@@ -2637,6 +2655,7 @@ MACHINE_START(AM335XEVM, "am335xevm")
 	.init_irq	= ti81xx_init_irq,
 	.handle_irq     = omap3_intc_handle_irq,
 	.timer		= &omap3_am33xx_timer,
+	.restart = mc341_restart, // update 2017.07.22
 	.init_machine	= mc341_init,
 MACHINE_END
 

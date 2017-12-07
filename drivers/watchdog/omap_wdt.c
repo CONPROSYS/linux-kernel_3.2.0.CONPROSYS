@@ -45,8 +45,10 @@
 #include <linux/pm_runtime.h>
 #include <mach/hardware.h>
 #include <plat/prcm.h>
+#include <linux/interrupt.h> //update 2017.07.22
 
 #include "omap_wdt.h"
+#include "am335x_wdt.h" //update 2017.07.22
 
 static struct platform_device *omap_wdt_dev;
 
@@ -61,8 +63,11 @@ struct omap_wdt_dev {
 	void __iomem    *base;          /* physical */
 	struct device   *dev;
 	int             omap_wdt_users;
+	unsigned int			irq;		//update 2017.07.22
 	struct resource *mem;
 	struct miscdevice omap_wdt_miscdev;
+
+	void (*restart)(char mode, const char *cmd);//update 2017.07.22
 };
 
 static void omap_wdt_ping(struct omap_wdt_dev *wdev)
@@ -137,6 +142,54 @@ static void omap_wdt_set_timeout(struct omap_wdt_dev *wdev)
 	pm_runtime_put_sync(wdev->dev);
 }
 
+//update 2017.07.22
+static irqreturn_t am335x_wdt_interrupt(int irq, void *dev_id)
+{
+	struct omap_wdt_dev *wdev = dev_id;
+	void __iomem    *base = wdev->base;
+	int handled = 0;
+	unsigned long irq_sts;
+
+	irq_sts = __raw_readl(base + AM335X_WATCHDOG_IRQ_STATUS);
+	if( (irq_sts & AM335X_WATCHDOG_IRQ_MASK ) ){
+
+		if( irq_sts & AM335X_WATCHDOG_IRQ_ENABLE_OVF){
+
+		}
+
+		if( irq_sts & AM335X_WATCHDOG_IRQ_ENABLE_DLY){
+				wdev->restart( "S", NULL );
+		}
+		__raw_writel(irq_sts, base + AM335X_WATCHDOG_IRQ_STATUS);
+		handled = 1;
+	}
+	
+	return IRQ_RETVAL(handled);
+}
+
+static void am335x_wdt_enable_interrupt(struct omap_wdt_dev *wdev, unsigned long bits)
+{
+	void __iomem    *base = wdev->base;
+
+	bits &= AM335X_WATCHDOG_IRQ_MASK;
+	__raw_writel(bits, base + AM335X_WATCHDOG_IRQ_ENABLE_SET);
+}
+
+static void am335x_wdt_clear_interrupt(struct omap_wdt_dev *wdev, unsigned long bits)
+{
+	void __iomem    *base = wdev->base;
+
+	bits &= AM335X_WATCHDOG_IRQ_MASK;
+	__raw_writel(bits, base + AM335X_WATCHDOG_IRQ_ENABLE_CLEAR);
+}
+
+static void am335x_wdt_delay_time(struct omap_wdt_dev *wdev, unsigned long delay_times)
+{
+	void __iomem    *base = wdev->base;
+
+	__raw_writel(delay_times, base + AM335X_WATCHDOG_DLY);
+}
+
 /*
  *	Allow only one task to hold it open
  */
@@ -162,6 +215,18 @@ static int omap_wdt_open(struct inode *inode, struct file *file)
 
 	omap_wdt_set_timeout(wdev);
 	omap_wdt_ping(wdev); /* trigger loading of new timeout value */
+	//update 2017.07.22
+	if( wdev->irq ){
+		/* 15msec before delay */
+		am335x_wdt_delay_time(wdev,
+				GET_WLDR_VAL_MSEC(15)//0xFFFFFFC0
+		);
+
+		am335x_wdt_enable_interrupt(wdev,
+			AM335X_WATCHDOG_IRQ_ENABLE_OVF |
+			AM335X_WATCHDOG_IRQ_ENABLE_DLY
+		);
+	}
 	omap_wdt_enable(wdev);
 
 	pm_runtime_put_sync(wdev->dev);
@@ -173,6 +238,10 @@ static int omap_wdt_release(struct inode *inode, struct file *file)
 {
 	struct omap_wdt_dev *wdev = file->private_data;
 
+	//update 2017.07.22
+	if( wdev->irq ){
+		am335x_wdt_enable_interrupt(wdev, 0);
+	}
 	/*
 	 *      Shut off the timer unless NOWAYOUT is defined.
 	 */
@@ -272,7 +341,7 @@ static const struct file_operations omap_wdt_fops = {
 
 static int __devinit omap_wdt_probe(struct platform_device *pdev)
 {
-	struct resource *res, *mem;
+	struct resource *res, *mem, *irq;
 	struct omap_wdt_dev *wdev;
 	int ret;
 
@@ -310,6 +379,12 @@ static int __devinit omap_wdt_probe(struct platform_device *pdev)
 		goto err_ioremap;
 	}
 
+	//update 2017.07.22
+	irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+	if (irq) {
+		wdev->irq = irq->start;
+	}
+
 	platform_set_drvdata(pdev, wdev);
 
 	pm_runtime_enable(wdev->dev);
@@ -334,6 +409,18 @@ static int __devinit omap_wdt_probe(struct platform_device *pdev)
 	pm_runtime_put_sync(wdev->dev);
 
 	omap_wdt_dev = pdev;
+
+	//update 2017.07.22
+	ret = request_irq(wdev->irq, am335x_wdt_interrupt, 0, "am335x_wdt",wdev);
+	if (ret) {
+		printk(KERN_ERR "OMAP Watchdog Timer: IRQ %d is not free.\n", wdev->irq);
+		goto err_misc;
+	}
+#ifdef CONFIG_CONTEC_MC34X
+	wdev->restart = &mc341_restart;
+#else
+	wdev->restart = NULL;
+#endif
 
 	return 0;
 
@@ -369,6 +456,10 @@ static int __devexit omap_wdt_remove(struct platform_device *pdev)
 {
 	struct omap_wdt_dev *wdev = platform_get_drvdata(pdev);
 	struct resource *res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+
+	//update 2017.07.22
+	if(wdev->irq)
+		free_irq(wdev->irq, NULL);
 
 	if (!res)
 		return -ENOENT;

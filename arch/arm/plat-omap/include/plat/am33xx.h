@@ -92,6 +92,11 @@ enum am33xx_cpsw_mac_mode {
 };
 int am33xx_cpsw_init(enum am33xx_cpsw_mac_mode mode, unsigned char *phy_id0,
 		     unsigned char *phy_id1);
+
+#ifdef CONFIG_CONTEC_MC34X
+void mc341_restart(char mode, const char *cmd); // update 2017.07.22
+#endif /* CONFIG_CONTEC_MC34X */
+
 #endif
 
 #endif /* __ASM_ARCH_AM33XX_H */

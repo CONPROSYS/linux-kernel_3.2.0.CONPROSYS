@@ -17,6 +17,7 @@
 // 2016.06.10 marge source kernel 3.14
 // 2016.06.22 add n25q512a module
 // 2016.07.03 change WAIT time 40s to 480s ( N25Q512A fixed jffs2 crc error )
+// 2017.07.22 Return addr_width mode from 4bit to 3bit. 
 
 #include <linux/init.h>
 #include <linux/err.h>
@@ -1504,7 +1505,15 @@ printk(KERN_INFO "m25p_remove in!!!"); // 2015.01.14
 	return 0;
 #else
 	struct m25p	*flash = spi_get_drvdata(spi);
+	// update 2017.07.22
+	if (flash->addr_width == 4) {
+		struct spi_device_id	*id = spi_get_device_id(spi);
+		struct flash_info		*info;
+		info = (void *)id->driver_data;
 
+		flash->addr_width = 3;
+		set_4byte(flash, info->jedec_id, 0);
+	}
 	/* Clean up MTD stuff. */
 	return mtd_device_unregister(&flash->mtd);
 #endif
