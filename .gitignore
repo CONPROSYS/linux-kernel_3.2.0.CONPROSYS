@@ -93,3 +93,5 @@ GTAGS
 *.1lan
 *.novlan
 *.2lan
+
+!.travis.yml

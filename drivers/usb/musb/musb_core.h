@@ -194,6 +194,7 @@ enum musb_g_ep0_state {
  * @write_fifo: write data into musb fifo in PIO
  * @set_mode:	forcefully changes operating mode
  * @try_ilde:	tries to idle the IP
+ * @recover:	platform-specific babble recovery
  * @get_hw_revision: get hardware revision
  * @vbus_status: returns vbus status if possible
  * @set_vbus:	forces vbus status
@@ -215,6 +216,7 @@ struct musb_platform_ops {
 
 	int	(*set_mode)(struct musb *musb, u8 mode);
 	void	(*try_idle)(struct musb *musb, unsigned long timeout);
+	int	(*recover)(struct musb *musb);//update 2017.12.08 (2)
 
 	u16  (*get_hw_revision)(struct musb *musb);
 
@@ -485,6 +487,9 @@ struct musb {
 	u32			sof_cnt;
 	u8			tx_isoc_sched_enable;
 	u8			sof_isoc_started;
+
+	/* fixed RX Ep0  */
+	u8			ep0_rx_error_counter; 	// update 2017.12.08 (1)
 };
 
 static inline struct musb *gadget_to_musb(struct usb_gadget *g)
@@ -618,6 +623,15 @@ static inline void musb_platform_try_idle(struct musb *musb,
 {
 	if (musb->ops->try_idle)
 		musb->ops->try_idle(musb, timeout);
+}
+
+//update 2017.12.08 (2)
+static inline int  musb_platform_recover(struct musb *musb)
+{
+	if (!musb->ops->recover)
+		return 0;
+
+	return musb->ops->recover(musb);
 }
 
 static inline int musb_platform_get_vbus_status(struct musb *musb)

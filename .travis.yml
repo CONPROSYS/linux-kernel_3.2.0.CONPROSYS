@@ -1,0 +1,33 @@
+language: C
+
+sudo:
+  - required
+
+os:
+  - linux
+
+dist:
+  - trusty
+
+compiler:
+  - gcc
+
+before_install:
+  # apt-get install
+  - sudo apt-get install -y gcc-4.7-arm-linux-gnueabi libncurses5-dev binutils-arm-linux-gnueabi u-boot-tools
+  - export CROSS_COMPILE=arm-linux-gnueabi-
+  - export ARCH=arm
+  - sudo ln -s /usr/bin/arm-linux-gnueabi-gcc-4.7 /usr/bin/arm-linux-gnueabi-gcc
+  - export CPU_COUNT=`cat /proc/cpuinfo | grep -c processor`
+  - export JOB_NUMBER=`expr $CPU_COUNT + 1`
+
+script:
+  - ls /usr/bin/arm* 
+  - make distclean
+  - make defconfig CPS-MCS341-DSX.novlan_defconfig
+  - make prepare
+  - make -j$JOB_NUMBER uImage
+  - sudo make -j$JOB_NUMBER modules
+  - sudo make -j$JOB_NUMBER modules_install 
+after_script:
+

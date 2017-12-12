@@ -20,6 +20,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+// update 2017.09.29 attributeを追加するために伴った変更
 #include <linux/module.h>
 #include <linux/tty.h>
 #include <linux/slab.h>
@@ -2375,6 +2376,10 @@ int uart_add_one_port(struct uart_driver *drv, struct uart_port *uport)
 	if (likely(!IS_ERR(tty_dev))) {
 		device_init_wakeup(tty_dev, 1);
 		device_set_wakeup_enable(tty_dev, 0);
+		dev_set_drvdata(tty_dev, uport); // update 2017.09.29
+		uport->private_data = (struct device *)tty_dev;// update 2017.09.29
+		pr_debug("tty_dev=%x\n",tty_dev);// update 2017.09.29
+
 	} else
 		printk(KERN_ERR "Cannot register tty device on line %d\n",
 		       uport->line);

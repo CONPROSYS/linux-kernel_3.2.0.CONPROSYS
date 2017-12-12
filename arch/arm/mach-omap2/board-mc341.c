@@ -66,6 +66,13 @@
 // update 2017.07.04 Ver.2.1.8 (1) Change sitara-linux-v3.2_AMSDK-06.00.00.00 source code.
 //                                 drivers/usb/musb all source codes.
 // update 2017.07.22           (1) Add mc341_restart function. ( watchdog　/reboot )
+// update 2017.07.25           (1) Change ti81xx.c. Add phy_power attribute.
+//                                 And change usb.h. Add phy_power value.< arch/arm/plat-omap/include/plat > ( Manually usb-host ON/OFF )
+// update 2017.12.08           (1) The eternal RX_Packet Errors is occured to run contact discharge.
+//                                 The musb_core.c, musb_host.c and ti81xx.c change phy reset routine.
+//                             (2) A part of source code is ported from kernel 4.9.(musb_core.c andmusb_core.h)
+//                             (3) Comment out phy_power attribute.(ti81xx.c).
+// update 2017.12.11           (1) 2017.09.29に対応した uart ドライバにattributeを追加するためにserial_core.cを変更したものをマージ
 //#define MC341LAN2 (1)
 #define MC341
 #ifndef MC341
@@ -73,8 +80,8 @@
 */
 #endif
 
-// update 2017.07.22
-#define CPS_KERNEL_VERSION "Ver.2.1.8 (build: 2017/07/22) "
+// update 2017.12.08
+#define CPS_KERNEL_VERSION "Ver.2.1.9 (build: 2017/12/11) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>

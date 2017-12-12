@@ -87,6 +87,7 @@ struct omap_musb_board_data {
 	u8	interface_type;
 	u8	mode;
 	u16	power;
+	unsigned phy_power:1; // update 2017.07.25 (1)
 	unsigned extvbus:1;
 	u8	instances;
 	void	(*set_phy_power)(u8 id, u8 on);

@@ -88,6 +88,8 @@
  *
  * Most of the conditional compilation will (someday) vanish.
  */
+// update 2017.12.08 (1)
+// update 2017.12.08 (2) kernel 4.9から移植
 
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -441,6 +443,8 @@ void musb_hnp_stop(struct musb *musb)
 	musb->port1_status &= ~(USB_PORT_STAT_C_CONNECTION << 16);
 }
 
+static void musb_recover_from_babble(struct musb *musb);	// update 2017.12.08 (2)
+
 /*
  * Interrupt Service Routine to record USB "global" interrupts.
  * Since these do not happen often and signify things of
@@ -789,8 +793,23 @@ static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
 			}
 			break;
 		case OTG_STATE_B_HOST:
-			if (is_otg_enabled(musb))
-				musb_hnp_stop(musb);
+		// update 2017.12.08 (2)
+//			if (is_otg_enabled(musb))
+//				musb_hnp_stop(musb);
+			/* REVISIT this behaves for "real disconnect"
+			 * cases; make sure the other transitions from
+			 * from B_HOST act right too.  The B_HOST code
+			 * in hnp_stop() is currently not used...
+			 */
+			if (is_otg_enabled(musb)){
+				struct usb_hcd	*hcd = musb_to_hcd(musb);
+				musb_root_disconnect(musb);
+				if (hcd)
+					hcd->self.is_b_host = 0;
+				musb->xceiv->state = OTG_STATE_B_PERIPHERAL;
+				MUSB_DEV_MODE(musb);
+				musb_g_disconnect(musb);
+			}
 			break;
 		case OTG_STATE_A_PERIPHERAL:
 			if (is_otg_enabled(musb)) {
@@ -838,6 +857,18 @@ static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
 				ERR("Stopping host session -- babble\n");
 				musb_writeb(musb->mregs, MUSB_DEVCTL, 0);
 			}
+			// update 2017.12.08 (2)
+			/*
+			 * When BABBLE happens what we can depends on which
+			 * platform MUSB is running, because some platforms
+			 * implemented proprietary means for 'recovering' from
+			 * Babble conditions. One such platform is AM335x. In
+			 * most cases, however, the only thing we can do is
+			 * drop the session.
+			 */
+			//dev_err(musb->controller, "Babble\n");
+			//if (is_host_active(musb))
+			//	musb_recover_from_babble(musb);
 		} else if (is_peripheral_enabled(musb)) {
 			dev_dbg(musb->controller, "BUS RESET as %s\n",
 				otg_state_string(musb->xceiv->state));
@@ -942,6 +973,17 @@ static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
 }
 
 /*-------------------------------------------------------------------------*/
+// update 2017.12.08 (2)
+static void musb_enable_interrupts(struct musb *musb)
+{
+	void __iomem    *regs = musb->mregs;
+
+	/*  Set INT enable registers, enable interrupts */
+	musb_writew(regs, MUSB_INTRTXE, musb->epmask);
+	musb_writew(regs, MUSB_INTRRXE, musb->epmask & 0xfffe);
+	musb_writeb(regs, MUSB_INTRUSBE, 0xf7);
+
+}
 
 /*
 * Program the HDRC to start (enable interrupts, dma, etc.).
@@ -954,9 +996,7 @@ void musb_start(struct musb *musb)
 	dev_dbg(musb->controller, "<== devctl %02x\n", devctl);
 
 	/*  Set INT enable registers, enable interrupts */
-	musb_writew(regs, MUSB_INTRTXE, musb->epmask);
-	musb_writew(regs, MUSB_INTRRXE, musb->epmask & 0xfffe);
-	musb_writeb(regs, MUSB_INTRUSBE, 0xf7);
+	musb_enable_interrupts(musb); // update 2017.12.08 (2)
 
 	musb_writeb(regs, MUSB_TESTMODE, 0);
 
@@ -1856,6 +1896,46 @@ static void musb_irq_work(struct work_struct *data)
 		musb->old_state = musb->xceiv->state;
 		sysfs_notify(&musb->controller->kobj, NULL, "mode");
 	}
+}
+// update 2017.12.08 (2)
+static void musb_recover_from_babble(struct musb *musb)
+{
+	int ret;
+	u8 devctl;
+
+	musb_generic_disable(musb);
+	/*
+	 * wait at least 320 cycles of 60MHz clock. That's 5.3us, we will give
+	 * it some slack and wait for 10us.
+	 */
+	udelay(10);
+
+	ret  = musb_platform_recover(musb);
+	if (ret) {
+		musb_enable_interrupts(musb);
+		return;
+	}
+
+	/* drop session bit */
+	devctl = musb_readb(musb->mregs, MUSB_DEVCTL);
+	devctl &= ~MUSB_DEVCTL_SESSION;
+	musb_writeb(musb->mregs, MUSB_DEVCTL, devctl);
+
+	/* tell usbcore about it */
+	musb_root_disconnect(musb);
+
+	/*
+	 * When a babble condition occurs, the musb controller
+	 * removes the session bit and the endpoint config is lost.
+	 */
+	if (musb->dyn_fifo)
+		ret = ep_config_from_table(musb);
+	else
+		ret = ep_config_from_hw(musb);
+
+	/* restart session */
+	if (ret == 0)
+		musb_start(musb);
 }
 
 /* --------------------------------------------------------------------------

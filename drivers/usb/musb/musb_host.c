@@ -32,6 +32,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+// update 2017.12.08
 
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -1205,10 +1206,14 @@ irqreturn_t musb_h_ep0_irq(struct musb *musb)
 
 		musb_writeb(epio, MUSB_NAKLIMIT0, 0);
 
+		musb->ep0_rx_error_counter ++; // update 2017.12.08
+
 		/* clear it */
 		musb_writew(epio, MUSB_CSR0, 0);
 	}
-
+	// else{
+	//	musb->ep0_rx_error_counter = 0 ; // update 2017.12.08	// 正常時はRXCounterをクリアする。//作動しないため、念のためコメントとして残しておく
+	//	}
 	if (unlikely(!urb)) {
 		/* stop endpoint since we have no place for its data, this
 		 * SHOULD NEVER HAPPEN! */
@@ -1662,6 +1667,9 @@ void musb_host_rx(struct musb *musb, u8 epnum)
 		musb_h_flush_rxfifo(hw_ep, MUSB_RXCSR_CLRDATATOG);
 		musb_writeb(epio, MUSB_RXINTERVAL, 0);
 		done = true;
+
+		musb->ep0_rx_error_counter ++; // update 2017.12.08
+
 		goto finish;
 	}
 

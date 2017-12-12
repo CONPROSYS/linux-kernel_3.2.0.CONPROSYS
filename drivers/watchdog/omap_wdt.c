@@ -158,7 +158,7 @@ static irqreturn_t am335x_wdt_interrupt(int irq, void *dev_id)
 		}
 
 		if( irq_sts & AM335X_WATCHDOG_IRQ_ENABLE_DLY){
-				wdev->restart( "S", NULL );
+				wdev->restart( 'S', NULL );
 		}
 		__raw_writel(irq_sts, base + AM335X_WATCHDOG_IRQ_STATUS);
 		handled = 1;

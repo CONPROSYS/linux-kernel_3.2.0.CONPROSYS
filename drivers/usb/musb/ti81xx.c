@@ -25,7 +25,8 @@
  * Suite 330, Boston, MA  02111-1307  USA
  *
  */
-
+// update 2017.07.25 (1)
+// update 2017.12.08
 
 #include <linux/init.h>
 #include <linux/io.h>
@@ -39,6 +40,17 @@
 
 #include "musb_core.h"
 #include "cppi41_dma.h"
+
+// update 2017.12.08
+#include <linux/gpio.h>
+/* Convert GPIO signal to GPIO pin number */
+#define GPIO_TO_PIN(bank, gpio) (32 * (bank) + (gpio))
+
+#define GPIO_POWER_24V_MC341 GPIO_TO_PIN( 1, 4 )		//GPIO 36
+#define GPIO_POWER_RESET_MC341 GPIO_TO_PIN( 1, 5 )		//GPIO 37
+#define GPIO_POWER_USB_MC341 GPIO_TO_PIN( 0, 23 )		//GPIO 23
+
+#define PACKET_DESTROY_PHY_RESET_COUNT	20
 
 #ifdef CONFIG_PM
 struct ti81xx_usbss_regs {
@@ -920,10 +932,43 @@ void musb_babble_workaround(struct musb *musb)
 	ERR("Babble: devtcl(%x)Restarting musb....\n",
 			 musb_readb(musb->mregs, MUSB_DEVCTL));
 
+	musb_stop(musb);// update 2017.12.08
+
+	ti81xx_musb_disable(musb); // update 2017.12.08
+	/*
+	 * wait at least 320 cycles of 60MHz clock. That's 5.3us, we will give
+	 * it some slack and wait for 10us.
+	 */
+	udelay(10);
+
+	/* tell usbcore about it */
+	musb_root_disconnect(musb); // update 2017.12.08
+
 	/* Reset the controller */
 	musb_writel(reg_base, USB_CTRL_REG, USB_SOFT_RESET_MASK);
 	while ((musb_readl(reg_base, USB_CTRL_REG) & 0x1))
 		cpu_relax();
+
+// update 2017.12.08
+#ifndef CONFIG_MACH_MC342B00
+		if( musb->id == 1 ){
+			dev_dbg(musb->controller, "Babble: stop mc341 routine\n");
+			//23
+			gpio_request(GPIO_POWER_USB_MC341, "GPIO_POWER_USB");
+			gpio_direction_output(GPIO_POWER_USB_MC341, 0);
+			gpio_export(GPIO_POWER_USB_MC341, true ) ;
+			// 37
+			gpio_request(GPIO_POWER_RESET_MC341, "GPIO_POWER_RESET");
+			gpio_direction_output(GPIO_POWER_RESET_MC341, 0);
+			gpio_export(GPIO_POWER_RESET_MC341, true ) ;
+			udelay(100);
+
+			//36
+			gpio_request(GPIO_POWER_24V_MC341, "GPIO_POWER_24V_MC341");
+			gpio_direction_output(GPIO_POWER_24V_MC341, 0);
+			gpio_export(GPIO_POWER_24V_MC341, true ) ;
+		}
+#endif
 
 	/* Shutdown the on-chip PHY and its PLL. */
 	if (data->set_phy_power)
@@ -937,6 +982,27 @@ void musb_babble_workaround(struct musb *musb)
 	if (data->set_phy_power)
 		data->set_phy_power(musb->id, 1);
 	mdelay(100);
+
+// update 2017.12.08
+#ifndef CONFIG_MACH_MC342B00
+	if( musb->id == 1 ){
+		dev_dbg(musb->controller, "Babble: start mc341 routine\n");
+		// 36
+		gpio_direction_output(GPIO_POWER_24V_MC341, 1);
+
+		mdelay(2500); // 2.5sec
+
+		// 37
+		gpio_direction_output(GPIO_POWER_RESET_MC341, 1);
+
+		mdelay(500);
+
+		// 23
+		gpio_direction_output(GPIO_POWER_USB_MC341, 1);
+	}
+#endif
+
+	ti81xx_musb_enable(musb); // update 2017.12.08
 
 	/* re-setup the endpoint fifo addresses */
 	if (musb->ops->reinit)
@@ -1178,6 +1244,13 @@ static irqreturn_t ti81xx_interrupt(int irq, void *hci)
 	if (musb->int_tx || musb->int_rx || musb->int_usb)
 		ret |= musb_interrupt(musb);
 
+	// update 2017.12.08
+	if (musb->ep0_rx_error_counter > PACKET_DESTROY_PHY_RESET_COUNT ){
+		dev_dbg(musb->controller,"reset phy");
+		musb_babble_workaround(musb);
+		musb->ep0_rx_error_counter = 0;
+	}
+
  eoi:
 	/* EOI needs to be written for the IRQ to be re-asserted. */
 	if (ret == IRQ_HANDLED || epintr || usbintr) {
@@ -1297,9 +1370,10 @@ int ti81xx_musb_init(struct musb *musb)
 		cpu_relax();
 
 	/* Start the on-chip PHY and its PLL with PHYWKUP disabled */
-	if (data->set_phy_power)
+	if (data->set_phy_power){
 		data->set_phy_power(musb->id, 1);
-
+		data->phy_power = 1;// update 2017.07.25 (1)
+	}
 	musb->a_wait_bcon = A_WAIT_BCON_TIMEOUT;
 	musb->isr = ti81xx_interrupt;
 
@@ -1414,8 +1488,10 @@ int ti81xx_musb_exit(struct musb *musb)
 		del_timer_sync(&musb->otg_workaround);
 
 	/* Shutdown the on-chip PHY and its PLL. */
-	if (data->set_phy_power)
+	if (data->set_phy_power){
 		data->set_phy_power(musb->id, 0);
+		data->phy_power = 0;// update 2017.07.25 (1)
+	}
 
 	otg_put_transceiver(musb->xceiv);
 	usb_nop_xceiv_unregister(musb->id);
@@ -1450,11 +1526,78 @@ static struct musb_platform_ops ti81xx_ops = {
 	.disable_sof = ti81xx_musb_disable_sof
 };
 
+//update 2017.07.25 (1)
+/**
+	@~English
+	@brief This function is stored device file.
+	@param dev : device structure
+	@param attr : device_attribute structure
+	@param buf : buffer
+	@param count : count
+	@return Success : Size
+	@~Japanese
+	@brief ti81xx_phy_power をデバイスファイルから操作する関数
+	@param dev : device 構造体
+	@param attr : device_attribute 構造体
+	@param buf : buffer
+	@param count : count
+	@return Size
+**/
+static int ti81xx_attr_phy_power_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count )
+{
+	struct musb_hdrc_platform_data  *pdata = dev->platform_data;
+	struct omap_musb_board_data *bdata = pdata->board_data;
+
+	switch( buf[0] ){
+	case '0':
+		bdata->phy_power = 0;
+		break;
+	case '1':
+		bdata->phy_power = 1;
+		break;
+	}
+
+	if (bdata->set_phy_power)
+		bdata->set_phy_power(1, bdata->phy_power);
+
+	return strlen(buf);
+}
+//update 2017.07.25 (1)
+/**
+	@~English
+	@brief This function is shown device file.
+	@param dev : device structure
+	@param attr : device_attribute structure
+	@param buf : buffer
+	@return Success : Size
+	@~Japanese
+	@brief ti81xx_phy_power をデバイスファイルへ書き出す間数
+	@param dev : device 構造体
+	@param attr : device_attribute 構造体
+	@param buf : buffer
+	@return
+**/
+static int ti81xx_attr_phy_power_show(struct device *dev, struct device_attribute *attr, char *buf )
+{
+	struct musb_hdrc_platform_data  *pdata = dev->platform_data;
+	struct omap_musb_board_data *bdata = pdata->board_data;
+
+	return sprintf(buf,"%d", bdata->phy_power);
+}
+
+//update 2017.07.25
+static DEVICE_ATTR(phy_power, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP	| S_IROTH | S_IWOTH,
+		ti81xx_attr_phy_power_show, ti81xx_attr_phy_power_store);
+
 
 static void __devexit ti81xx_delete_musb_pdev(struct ti81xx_glue *glue, u8 id)
 {
 	platform_device_del(glue->musb[id]);
 	platform_device_put(glue->musb[id]);
+	//update 2017.07.25 (1)
+	// comment out 2017.12.08
+	// device_remove_file(&glue->musb[id]->dev, &dev_attr_phy_power);
+
 }
 
 static int __devinit ti81xx_create_musb_pdev(struct ti81xx_glue *glue, u8 id)
@@ -1531,6 +1674,14 @@ static int __devinit ti81xx_create_musb_pdev(struct ti81xx_glue *glue, u8 id)
 	ret = platform_device_add(musb);
 	if (ret) {
 		dev_err(dev, "failed to register musb device\n");
+		goto err1;
+	}
+
+	//update 2017.07.25 (1)
+	// comment out 2017.12.08
+	// ret = device_create_file(&musb->dev, &dev_attr_phy_power);
+	if (ret) {
+		dev_err(dev, "failed to device_create_file\n");
 		goto err1;
 	}
 
@@ -1837,8 +1988,10 @@ static int ti81xx_runtime_suspend(struct device *dev)
 
 	/* Shutdown the on-chip PHY and its PLL. */
 	for (i = 0; i <= data->instances; ++i) {
-		if (data->set_phy_power)
+		if (data->set_phy_power){
 			data->set_phy_power(i, 0);
+			data->phy_power = 0;// update 2017.07.25 (1)
+		}
 	}
 
 	return 0;
@@ -1862,8 +2015,10 @@ static int ti81xx_runtime_resume(struct device *dev)
 
 	/* Start the on-chip PHY and its PLL. */
 	for (i = 0; i <= data->instances; ++i) {
-		if (data->set_phy_power)
+		if (data->set_phy_power){
 			data->set_phy_power(i, 1);
+			data->phy_power = 1;// update 2017.07.25 (1)
+		}
 	}
 
 	/* restore wrappers and cppi4.1 dma register */
