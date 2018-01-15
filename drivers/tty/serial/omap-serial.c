@@ -678,6 +678,15 @@ static void serial_omap_shutdown(struct uart_port *port)
 
 	spin_lock_irqsave(&up->port.lock, flags);
 	up->port.mctrl &= ~TIOCM_OUT2;
+
+	// update 2017.12.14 After the closeing serial port uses halfduplex, the other device can not communicate.
+	if( up->pdev->id ==0 || up->pdev->id == 1 ||
+	    up->pdev->id ==3 || up->pdev->id == 5 ){
+		if( TIOCSRS485_mode[up->pdev->id] ){
+			up->port.mctrl &= ~TIOCM_RTS;
+		}
+	}
+
 	serial_omap_set_mctrl(&up->port, up->port.mctrl);
 	spin_unlock_irqrestore(&up->port.lock, flags);
 
