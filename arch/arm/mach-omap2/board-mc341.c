@@ -74,6 +74,7 @@
 //                             (3) Comment out phy_power attribute.(ti81xx.c).
 // update 2017.12.11           (1) 2017.09.29に対応した uart ドライバにattributeを追加するためにserial_core.cを変更したものをマージ
 // update 2018.01.11           (1) Fixed Date 2017.12.14. After the closeing serial port uses halfduplex, the other device can not communicate.( omap-serial.c )
+// update 2018.01.19           (1) Change 8188eu driver. Do not use 8188eu-v4.3.0.8_13968.It uses rtl8188eu driver.(lwfinger makeing driver)
 //#define MC341LAN2 (1)
 #define MC341
 #ifndef MC341
@@ -81,8 +82,8 @@
 */
 #endif
 
-// update 2018.01.11
-#define CPS_KERNEL_VERSION "Ver.2.1.9 (build: 2018/01/11) "
+// update 2018.01.19
+#define CPS_KERNEL_VERSION "Ver.2.1.9 (build: 2018/01/19) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>
