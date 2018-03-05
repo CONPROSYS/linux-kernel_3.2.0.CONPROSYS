@@ -1,7 +1,7 @@
 /*
  * Code for CONPROSYS Series.by the CONTEC.
  *
- * Copyright (C) 2015 CONTEC.Co.,Ltd. - http://www.contec.co.jp/
+ * Copyright (C) 2015-2018 CONTEC.Co.,Ltd. - http://www.contec.com/jp
  * Based by board-am34xevm.c. 
  *
  * This program is free software; you can redistribute it and/or
@@ -74,7 +74,8 @@
 //                             (3) Comment out phy_power attribute.(ti81xx.c).
 // update 2017.12.11           (1) 2017.09.29に対応した uart ドライバにattributeを追加するためにserial_core.cを変更したものをマージ
 // update 2018.01.11           (1) Fixed Date 2017.12.14. After the closeing serial port uses halfduplex, the other device can not communicate.( omap-serial.c )
-// update 2018.01.19           (1) Change 8188eu driver. Do not use 8188eu-v4.3.0.8_13968.It uses rtl8188eu driver.(lwfinger makeing driver)
+// update 2018.01.19 Ver.2.1.9 (1) Change 8188eu driver. Do not use 8188eu-v4.3.0.8_13968.It uses rtl8188eu driver.(lwfinger makeing driver)
+// update 2018.03.04           (1) Add SV-MCD-MC341.
 //#define MC341LAN2 (1)
 #define MC341
 #ifndef MC341
@@ -82,8 +83,8 @@
 */
 #endif
 
-// update 2018.01.19
-#define CPS_KERNEL_VERSION "Ver.2.1.9 (build: 2018/01/19) "
+// update 2018.03.04
+#define CPS_KERNEL_VERSION "Ver.2.2.0 (build: 2018/03/04) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -298,9 +299,11 @@ static struct omap_board_mux board_mux[] __initdata = {
 	// update 2015.02.03 XDMA_EVENT_INTRO config update
 	// AM33XX_MUX(XDMA_EVENT_INTR0, OMAP_MUX_MODE3 | AM33XX_PIN_OUTPUT),
 	
-//	AM33XX_MUX(XDMA_EVENT_INTR0, OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP), // MC341LAN1
+//	
 //	{"xdma_event_intr0.spi1_cs1", OMAP_MUX_MODE4 | AM33XX_PIN_OUTPUT},		/* SPI1_CS1 */ // MC341LAN2
-#ifndef CONFIG_MACH_MC341B00
+#ifdef CONFIG_MACH_MC341B00 //2018.03.04 (1)
+	AM33XX_MUX(XDMA_EVENT_INTR0, OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP), // MC341LAN1
+#else
 	AM33XX_MUX(XDMA_EVENT_INTR0, OMAP_MUX_MODE4 | AM33XX_PIN_OUTPUT), // MC341LAN2
 #endif
 
@@ -310,7 +313,9 @@ static struct omap_board_mux board_mux[] __initdata = {
 	AM33XX_MUX(I2C0_SCL, OMAP_MUX_MODE0 | AM33XX_SLEWCTRL_SLOW |
 			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
 
-#ifndef CONFIG_MACH_MC342B20
+// #ifndef CONFIG_MACH_MC342B20
+#if !defined(CONFIG_MACH_MC342B20) && !defined(CONFIG_MACH_MC341B00) // change 2018.03.03 (1)
+
 // for i2c1
 	AM33XX_MUX(UART0_CTSN, OMAP_MUX_MODE3 | AM33XX_SLEWCTRL_SLOW |
 			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
@@ -686,6 +691,17 @@ static struct pinmux_config mc341_gpio_led_mux[] = {
 	{"gpmc_ad14.gpio1_14",OMAP_MUX_MODE7|AM33XX_PIN_OUTPUT},
 	{"gpmc_ad15.gpio1_15",OMAP_MUX_MODE7|AM33XX_PIN_OUTPUT},
 #endif
+	{NULL, 0},
+};
+
+// pinmux for led device
+static struct pinmux_config mc341b00_gpio_led_mux[] = {
+	{"gpmc_a8.gpio1_24", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},			/* LED_AI0n */
+	{"gpmc_a9.gpio1_25", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},			/* LED_AI1n */
+	{"gpmc_a10.gpio1_26", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},			/* LED_ST0n */
+	{"gpmc_a11.gpio1_27", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},			/* LED_ST1n */
+	{"gpmc_ad6.gpio1_6", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},			/* LAN_SPEED_LED */
+	{"mii1_col.gpio3_0", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},			/* F-LED_PWn */
 	{NULL, 0},
 };
 
@@ -1211,6 +1227,32 @@ static void gpio_keys_init(int evm_id, int profile)
 }
 
 static struct gpio_led gpio_leds[] = {
+#ifdef CONFIG_MACH_MC341B00
+	{
+		.name			= "MC341B-00:LED_AI0n",
+		.gpio			= GPIO_TO_PIN(1, 24),
+	},
+	{
+		.name			= "MC341B-00:LED_AI1n",
+		.gpio			= GPIO_TO_PIN(1, 25),
+	},
+	{
+		.name			= "MC341B-00:LED_ST0n",
+		.gpio			= GPIO_TO_PIN(1, 26),
+	},
+	{
+		.name			= "MC341B-00:LED_ST1n",
+		.gpio			= GPIO_TO_PIN(1, 27),
+	},
+	{
+		.name			= "MC341B-00:LAN_SPEED_LED",
+		.gpio			= GPIO_TO_PIN(1, 6),
+	},
+	{
+		.name			= "MC341B-00:F-LED_PWn",
+		.gpio			= GPIO_TO_PIN(3, 0),
+	},
+#else
 	{
 		.name			= "MC341B-00:LED_ST0n",
 		.gpio			= GPIO_TO_PIN(0, 26),
@@ -1219,16 +1261,12 @@ static struct gpio_led gpio_leds[] = {
 		.name			= "MC341B-00:LED_ST1n",
 		.gpio			= GPIO_TO_PIN(0, 27),
 	},
-/*
-	{
-		.name			= "MC341B-00:LAN_SPEED_LED",
-		.gpio			= GPIO_TO_PIN(1, 6),
-	},
-*/
 	{
 		.name			= "MC341B-00:F-LED_PWn",
 		.gpio			= GPIO_TO_PIN(2, 3),
 	},
+#endif
+
 	{
 		.name			= "MC341B-00:3G_PWn",
 		.gpio			= GPIO_TO_PIN(1, 4),
@@ -1289,6 +1327,8 @@ static void gpio_led_init(int evm_id, int profile)
 	setup_pin_mux(mcs341_gpio_led_mux);
 #elif defined(CONFIG_MACH_MC342B20)
 	setup_pin_mux(ecs341_gpio_led_mux);
+#elif defined(CONFIG_MACH_MC342B00)
+	setup_pin_mux(mc341b00_gpio_led_mux);
 #else
 	setup_pin_mux(mc341_gpio_led_mux);
 #endif
@@ -1594,7 +1634,11 @@ static void nmin_init(int evm_id, int profile){
 // koko
 static struct evm_dev_cfg evm_sk_dev_cfg[] = {
 //	{mmc1_wl12xx_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+#ifndef CONFIG_MACH_MC341B00 
 	{mmc0_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{usb0_init,	DEV_ON_BASEBOARD, PROFILE_ALL},// add 2015.02.27
+	{usb1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+#endif
 //	{rgmii1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 //	{rgmii2_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 #ifdef CONFIG_MACH_MC342B20
@@ -1624,8 +1668,8 @@ static struct evm_dev_cfg evm_sk_dev_cfg[] = {
 // 	{spi0_init,	DEV_ON_DGHTR_BRD, PROFILE_ALL}, // add 2014.11.24
 //	{spi0_init,	DEV_ON_DGHTR_BRD, PROFILE_0}, // for spidev add 1207
  	{spi0_init,	DEV_ON_BASEBOARD, PROFILE_ALL}, // add 2014.12.23
-	{usb0_init,	DEV_ON_BASEBOARD, PROFILE_ALL},// add 2015.02.27
-	{usb1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+//	{usb0_init,	DEV_ON_BASEBOARD, PROFILE_ALL},// add 2015.02.27
+//	{usb1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 #ifdef CONFIG_MACH_MC34X_ENABLE_NMI_INTERRUPT
 	{nmin_init,	DEV_ON_BASEBOARD, PROFILE_ALL}, // add 2015.07.21
 #endif
@@ -1726,8 +1770,11 @@ static void setup_starterkit(void)
 	_configure_device(EVM_SK, evm_sk_dev_cfg, PROFILE_NONE);
 
 	// update 2015.02.18 am33xx_cpsw_init
-	// am33xx_cpsw_init(AM33XX_CPSW_MODE_RMII, "0:00", "0:1e");
+#ifdef CONFIG_MACH_MC341B00
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_RMII, "0:00", "0:1e");
+#else
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_RMII, "0:00", "0:01");
+#endif
 
 	/* Initialize TLK110 PHY registers for phy version 1.0 */
 	mc341_tlk110_phy_init();
@@ -1741,6 +1788,7 @@ static void setup_starterkit(void)
 	// update 2015.02.26 uart5 update
 //#if defined(CONFIG_MACH_MC341B30)	// update 2016.04.29 
 
+#if defined(CONFIG_MACH_MC341B00)
 #if defined(CONFIG_MACH_MC341B30) || defined(CONFIG_MACH_MC341B50)
 	// uart5 RS422/RS485 type
 	setup_pin_mux(uart5_rs485_pin_mux);
@@ -1765,6 +1813,7 @@ static void setup_starterkit(void)
            "gpio control: %d\n", __func__, ret);
 		}
 	#endif
+#endif
 #endif
 
 #if !defined(CONFIG_MACH_MC342B20)	// MCx Series only
@@ -1889,10 +1938,6 @@ static void setup_starterkit(void)
 	}
 #endif
 }
-
-
-
-
 /*
 static void mc341_setup_daughter_board(struct memory_accessor *m, void *c)
 {
@@ -2070,8 +2115,6 @@ out:
 		   __func__ , __FILE__);
 	machine_halt();
 }
-
-
 /*
 static struct at24_platform_data mc341_daughter_board_eeprom_info = {
 	.byte_len       = (256*1024) / 8,
@@ -2102,14 +2145,10 @@ static struct at24_platform_data mc341_childboard_eeprom_info = {
 	.context        = (void *)NULL,
 };
 
-/*
-*/
 static struct regulator_init_data am335x_dummy = {
 	.constraints.always_on	= true,
 };
 
-/*
-*/
 static struct regulator_consumer_supply am335x_vdd1_supply[] = {
 	REGULATOR_SUPPLY("vdd_mpu", NULL),
 };
@@ -2411,7 +2450,11 @@ static int mc341_rtc_init(void)
 	 * we need to do it before the rtc probe happens
 	 */
 	// writel(0x48, base + 0x54);
+#ifdef CONFIG_MACH_MC341B00
+	writel(0x50, base + 0x54); // upd 2015.08.27
+#else
 	writel(0x40, base + 0x54); // upd 2015.01.06
+#endif
 
 	iounmap(base);
 
@@ -2667,7 +2710,6 @@ MACHINE_START(AM335XEVM, "am335xevm")
 	.restart = mc341_restart, // update 2017.07.22
 	.init_machine	= mc341_init,
 MACHINE_END
-
 /*
 MACHINE_START(AM335XIAEVM, "am335xiaevm")
 	// Maintainer: Texas Instruments
