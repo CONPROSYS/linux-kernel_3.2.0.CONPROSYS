@@ -340,6 +340,7 @@ static struct usb_device_id rtl8192c_usb_ids[] = {
 	{RTL_USB_DEVICE(0x7392, 0x7822, rtl92cu_hal_cfg)}, /*Edimax -Edimax*/
 	{RTL_USB_DEVICE(0x0b05, 0x17ba, rtl92cu_hal_cfg)}, /*ASUS - USB-N10 NANO*/
 	{RTL_USB_DEVICE(0x0846, 0x9021, rtl92cu_hal_cfg)}, /*NetGear - WNA3100M*/
+	{RTL_USB_DEVICE(0x04bb, 0x094c, rtl92cu_hal_cfg)}, /*IO DATA - WN-G150UM*/
 	{}
 };
 

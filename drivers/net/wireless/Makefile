@@ -70,3 +70,5 @@ obj-$(CONFIG_RTL8188EU) += rtl8188eu/
 # update 2016.12.21 Add Realtek 8192E USB WiFi
 obj-$(CONFIG_RTL8192EU) += rtl8192e/
 
+# update 2018.03.13 Add RTL8812A USB Wifi
+obj-$(CONFIG_RTL8812AU) += rtl8812au/ 
