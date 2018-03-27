@@ -76,6 +76,7 @@
 // update 2018.01.11           (1) Fixed Date 2017.12.14. After the closeing serial port uses halfduplex, the other device can not communicate.( omap-serial.c )
 // update 2018.01.19 Ver.2.1.9 (1) Change 8188eu driver. Do not use 8188eu-v4.3.0.8_13968.It uses rtl8188eu driver.(lwfinger makeing driver)
 // update 2018.03.04           (1) Add SV-MCD-MC341.
+// update 2018.03.26           (1) Fixed SV-MCD-MC341.(Install SD)
 //#define MC341LAN2 (1)
 #define MC341
 #ifndef MC341
@@ -83,8 +84,8 @@
 */
 #endif
 
-// update 2018.03.04
-#define CPS_KERNEL_VERSION "Ver.2.2.0 (build: 2018/03/04) "
+// update 2018.03.26
+#define CPS_KERNEL_VERSION "Ver.2.2.0 (build: 2018/03/26) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -1327,7 +1328,7 @@ static void gpio_led_init(int evm_id, int profile)
 	setup_pin_mux(mcs341_gpio_led_mux);
 #elif defined(CONFIG_MACH_MC342B20)
 	setup_pin_mux(ecs341_gpio_led_mux);
-#elif defined(CONFIG_MACH_MC342B00)
+#elif defined(CONFIG_MACH_MC341B00)
 	setup_pin_mux(mc341b00_gpio_led_mux);
 #else
 	setup_pin_mux(mc341_gpio_led_mux);
@@ -1634,8 +1635,8 @@ static void nmin_init(int evm_id, int profile){
 // koko
 static struct evm_dev_cfg evm_sk_dev_cfg[] = {
 //	{mmc1_wl12xx_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
-#ifndef CONFIG_MACH_MC341B00 
 	{mmc0_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+#ifndef CONFIG_MACH_MC341B00 
 	{usb0_init,	DEV_ON_BASEBOARD, PROFILE_ALL},// add 2015.02.27
 	{usb1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 #endif
@@ -1788,7 +1789,7 @@ static void setup_starterkit(void)
 	// update 2015.02.26 uart5 update
 //#if defined(CONFIG_MACH_MC341B30)	// update 2016.04.29 
 
-#if defined(CONFIG_MACH_MC341B00)
+#if !defined(CONFIG_MACH_MC341B00)
 #if defined(CONFIG_MACH_MC341B30) || defined(CONFIG_MACH_MC341B50)
 	// uart5 RS422/RS485 type
 	setup_pin_mux(uart5_rs485_pin_mux);
@@ -1814,7 +1815,7 @@ static void setup_starterkit(void)
 		}
 	#endif
 #endif
-#endif
+#endif // !defined(CONFIG_MACH_MC341B00)
 
 #if !defined(CONFIG_MACH_MC342B20)	// MCx Series only
 	setup_pin_mux(spi1_pin_mux);
@@ -1850,7 +1851,7 @@ static void setup_starterkit(void)
                        "gpio control: %d\n", __func__, ret);
 			}
 	}
-#endif
+#endif //CONFIG_MACH_MC341B00
 
 	//ESC Model
 #if defined(CONFIG_MACH_MC342B20) // ECS341 only 
@@ -2363,9 +2364,8 @@ static void __init mc341_i2c_init(void)
 				ARRAY_SIZE(mc341_i2c0_boardinfo));
 
 // update 2015.03.16 RFID add
-#if !defined(CONFIG_MACH_MC342B00) && !defined(CONFIG_MACH_MC342B20)
+#if !defined(CONFIG_MACH_MC342B00) && !defined(CONFIG_MACH_MC342B20) && !defined(CONFIG_MACH_MC341B00)
 	setup_pin_mux(mc341_i2c1_pin_mux);
-#endif
 
 if(0){
          #define GPIO_INIT_I2C1 GPIO_TO_PIN(0, 23)
@@ -2378,8 +2378,10 @@ if(0){
                        "gpio control: %d\n", __func__, ret);
          }
 }
+
 	omap_register_i2c_bus(2, 100, mc341_i2c1_boardinfo,
 				ARRAY_SIZE(mc341_i2c1_boardinfo));
+#endif
 
 	// 2014.12.23
 	#define SPI0_ROM_WPN GPIO_TO_PIN(3, 10)
@@ -2622,7 +2624,13 @@ void mc341_restart(char mode, const char *cmd)
 {
 	int ret;
 
+#if defined(CONFIG_MACH_MC341B00)
+	#define GPIO_RESET_POUT GPIO_TO_PIN( 3, 18 )	//GPIO 114
+#else
 	#define GPIO_RESET_POUT GPIO_TO_PIN( 3, 9 )		//GPIO 105
+#endif
+
+	
 	gpio_free(GPIO_RESET_POUT);
 	ret = gpio_request(GPIO_RESET_POUT, "GPIO_RESET_POUT");
 	if (!ret) {
