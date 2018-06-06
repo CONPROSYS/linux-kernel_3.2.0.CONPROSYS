@@ -20,6 +20,9 @@
  * this driver as required for the omap-platform.
  */
 
+// CPS_SERIAL_CTS_LINE_LOOPBACK_CHECK ... The RS485 Connecter is 
+//                                        RTS/CTS direct loopback for CONTEC CONPROSYS 
+
 #if defined(CONFIG_SERIAL_OMAP_CONSOLE) && defined(CONFIG_MAGIC_SYSRQ)
 #define SUPPORT_SYSRQ
 #endif
@@ -46,9 +49,11 @@
 
 #define DEFAULT_CLK_SPEED 48000000 /* 48Mhz*/
 
+#define BOTH_EMPTY (UART_LSR_TEMT | UART_LSR_THRE)
+// OMAP_MAX_HSUART_PORTS see plat/include/omap_serial.h (OMAP_MAX_HSUART_PORTS <= 6
 static struct uart_omap_port *ui[OMAP_MAX_HSUART_PORTS];
-static unsigned long TIOCSRS485_mode[6]={0,0,0,0,0,0};
-static int for_TIOCSRS485_baud_rate[6]={9600, 9600, 9600, 9600, 9600, 9600};
+static unsigned long TIOCSRS485_mode[OMAP_MAX_HSUART_PORTS]={0,0,0,0,0,0};
+static int for_TIOCSRS485_baud_rate[OMAP_MAX_HSUART_PORTS]={9600, 9600, 9600, 9600, 9600, 9600};
 
 /* Forward declaration of functions */
 static void uart_tx_dma_callback(int lch, u16 ch_status, void *data);
@@ -158,39 +163,40 @@ static void serial_omap_stop_tx(struct uart_port *port)
 	pm_runtime_mark_last_busy(&up->pdev->dev);
 	pm_runtime_put_autosuspend(&up->pdev->dev);
 
-	if( up->pdev->id == 1 ||
-	    up->pdev->id == 3 ||
-	    up->pdev->id == 5
-		){
-		if( TIOCSRS485_mode[up->pdev->id] ){
-			// #define UART_LSR_TEMT		0x40 // Transmitter empty
-			unsigned long flags = 0;
-			unsigned int ret = 0;
-			unsigned int mctrl;
+// update 2018.06.09 : half duplex direction can not here.
+// if( up->pdev->id == 1 ||
+	//     up->pdev->id == 3 ||
+	//     up->pdev->id == 5
+	// 	){
+	// 	if( TIOCSRS485_mode[up->pdev->id] ){
+	// 		// #define UART_LSR_TEMT		0x40 // Transmitter empty
+	// 		unsigned long flags = 0;
+	// 		unsigned int ret = 0;
+	// 		unsigned int mctrl;
 
-			// printk(KERN_NOTICE 
-			//   "[%s](%d) debug in serial_omap_stop_tx id[%d]", __FILE__, __LINE__, up->pdev->id );
-			#define BOTH_EMPTY (UART_LSR_TEMT | UART_LSR_THRE)
-			// #define TIOCSER_TEMT	0x01	/* Transmitter physically empty */
-			while(1){
-				udelay(1);
-				spin_lock_irqsave(&up->port.lock, flags);
-		 		// ret = serial_in(up, UART_LSR) & UART_LSR_TEMT ? TIOCSER_TEMT : 0;
-		 		ret = serial_in(up, UART_LSR) & BOTH_EMPTY ? TIOCSER_TEMT : 0;
-				spin_unlock_irqrestore(&up->port.lock, flags);
-				if( ret ) break;
-			}
-			// udelay(1000); // 1msec
-			// (9600 * 1000 )/2400=4000 // 4msec
-			// (9600 * 1000 )/9600= 1000 // 1msec
-			// (9600 * 1000 )/115200=83 // 0.083msec
-			// udelay( (9600 * 1000)/for_TIOCSRS485_baud_rate[up->pdev->id] );
-			udelay( (10560 * 1000)/for_TIOCSRS485_baud_rate[up->pdev->id] ); // 9600*1.1=10560
-			mctrl=serial_omap_get_mctrl( port );
-			mctrl &= (~TIOCM_RTS); // RTS off
-			serial_omap_set_mctrl( port, mctrl );
-		}
-	}
+	// 		// printk(KERN_NOTICE 
+	// 		//   "[%s](%d) debug in serial_omap_stop_tx id[%d]", __FILE__, __LINE__, up->pdev->id );
+	// 		#define BOTH_EMPTY (UART_LSR_TEMT | UART_LSR_THRE)
+	// 		// #define TIOCSER_TEMT	0x01	/* Transmitter physically empty */
+	// 		while(1){
+	// 			udelay(1);
+	// 			spin_lock_irqsave(&up->port.lock, flags);
+	// 	 		// ret = serial_in(up, UART_LSR) & UART_LSR_TEMT ? TIOCSER_TEMT : 0;
+	// 	 		ret = serial_in(up, UART_LSR) & BOTH_EMPTY ? TIOCSER_TEMT : 0;
+	// 			spin_unlock_irqrestore(&up->port.lock, flags);
+	// 			if( ret ) break;
+	// 		}
+	// 		// udelay(1000); // 1msec
+	// 		// (9600 * 1000 )/2400=4000 // 4msec
+	// 		// (9600 * 1000 )/9600= 1000 // 1msec
+	// 		// (9600 * 1000 )/115200=83 // 0.083msec
+	// 		// udelay( (9600 * 1000)/for_TIOCSRS485_baud_rate[up->pdev->id] );
+	// 		udelay( (10560 * 1000)/for_TIOCSRS485_baud_rate[up->pdev->id] ); // 9600*1.1=10560
+	// 		mctrl=serial_omap_get_mctrl( port );
+	// 		mctrl &= (~TIOCM_RTS); // RTS off
+	// 		serial_omap_set_mctrl( port, mctrl );
+	// 	}
+	// }
 }
 
 static void serial_omap_stop_rx(struct uart_port *port)
@@ -200,26 +206,27 @@ static void serial_omap_stop_rx(struct uart_port *port)
 	pm_runtime_get_sync(&up->pdev->dev);
 	if (up->use_dma)
 		serial_omap_stop_rxdma(up);
-	up->ier &= ~UART_IER_RLSI;
+	up->ier &= ~(UART_IER_RLSI | UART_IER_RDI);
 	up->port.read_status_mask &= ~UART_LSR_DR;
 	serial_out(up, UART_IER, up->ier);
 	pm_runtime_mark_last_busy(&up->pdev->dev);
 	pm_runtime_put_autosuspend(&up->pdev->dev);
 
-	if( up->pdev->id ==0 || up->pdev->id == 1 ||
-	    up->pdev->id ==3 || up->pdev->id == 5 ){
-		if( TIOCSRS485_mode[up->pdev->id] ){
-			unsigned int mctrl;
-//			printk(KERN_NOTICE 
-//			   "[%s](%d) debug in transmit_chars RTS on, id[%d]", __FILE__, __LINE__, up->pdev->id );
-			mctrl=serial_omap_get_mctrl( &up->port );
-			if( (mctrl & TIOCM_RTS) == 0 ){
-				mctrl |= TIOCM_RTS; // on
-// KOKO 2015.01.09
-//				serial_omap_set_mctrl( &up->port, mctrl );
-			}
-		}
-	}
+// update 2018.06.09 : half duplex direction can not here.
+// 	if( up->pdev->id ==0 || up->pdev->id == 1 ||
+// 	    up->pdev->id ==3 || up->pdev->id == 5 ){
+// 		if( TIOCSRS485_mode[up->pdev->id] ){
+// 			unsigned int mctrl;
+// //			printk(KERN_NOTICE 
+// //			   "[%s](%d) debug in transmit_chars RTS on, id[%d]", __FILE__, __LINE__, up->pdev->id );
+// 			mctrl=serial_omap_get_mctrl( &up->port );
+// 			if( (mctrl & TIOCM_RTS) == 0 ){
+// 				mctrl |= TIOCM_RTS; // on
+// // KOKO 2015.01.09
+// //				serial_omap_set_mctrl( &up->port, mctrl );
+// 			}
+// 		}
+// 	}
 }
 
 static inline void receive_chars(struct uart_omap_port *up,
@@ -229,6 +236,17 @@ static inline void receive_chars(struct uart_omap_port *up,
 	unsigned int flag, lsr = *status;
 	unsigned char ch = 0;
 	int max_count = 256;
+
+	unsigned long wait1data = 0;
+	int halfduplex_success = 0;
+	int buf_count;
+
+	// update 2018.06.09 : It sets wait time of half duplex.
+	if( TIOCSRS485_mode[up->pdev->id] ){
+		wait1data = (USEC_PER_SEC / for_TIOCSRS485_baud_rate[up->pdev->id] ) * 11;
+		halfduplex_success = 0;
+		dev_dbg(up->port.dev, "wait 1 data %ld usec \n", wait1data);
+	}
 
 	do {
 		if (likely(lsr & UART_LSR_DR))
@@ -284,30 +302,67 @@ static inline void receive_chars(struct uart_omap_port *up,
 		uart_insert_char(&up->port, lsr, UART_LSR_OE, ch, flag);
 ignore_char:
 		lsr = serial_in(up, UART_LSR);
+// update 2018.06.09 : If it sets half duplex, it checks receive data at last. 
+		if( TIOCSRS485_mode[up->pdev->id] && 
+			!(lsr & UART_LSR_DR)
+		){ // half-duplex 
+halfduplex_loop_count:			
+			if( (buf_count = serial_in(up, 0x19)) == 0 ){ // rx buffer checks
+				// note tx buffer 0x1A address 
+				halfduplex_success ++; // success count + 1
+				udelay(wait1data);// wait time delay ( 1 charcter )
+				if( halfduplex_success < 4 ){ // If less than 4 characters...
+					dev_dbg(up->port.dev,"rx success %d \n", halfduplex_success);
+					goto halfduplex_loop_count; // Could not "continue"...!
+				}
+			}else{
+				dev_dbg(up->port.dev,"rx buffer %d \n", buf_count);
+				/* retry the reading lsr ( LSR update )*/ 
+				lsr = serial_in(up, UART_LSR);
+				halfduplex_success = 0;
+				continue;
+			}
+		}
+
 	} while ((lsr & (UART_LSR_DR | UART_LSR_BI)) && (max_count-- > 0));
+
 	spin_unlock(&up->port.lock);
 	tty_flip_buffer_push(tty);
 	spin_lock(&up->port.lock);
 }
 
-static void transmit_chars(struct uart_omap_port *up)
+static void transmit_chars(struct uart_omap_port *up, unsigned int *lsr)
 {
 	struct circ_buf *xmit = &up->port.state->xmit;
 	int count;
+#if defined(CONFIG_MACH_MC34X_ENABLE_UART_CTS_LOOPBACK_CHECK)	
+	unsigned int msr;
+#endif
 
-	if( up->pdev->id == 1 ||
-	    up->pdev->id == 3 ||
-	    up->pdev->id == 5
+// update 2018.06.09 : It sets wait time of half duplex.
+	if( up->pdev->id >= 1 &&
+	    up->pdev->id < OMAP_MAX_HSUART_PORTS
 	){
-	 if( TIOCSRS485_mode[up->pdev->id] ){
-		unsigned int mctrl;
-		mctrl=serial_omap_get_mctrl( &up->port );
-		if( (mctrl & TIOCM_RTS)==0 ){
-			mctrl |= TIOCM_RTS; // on
-			serial_omap_set_mctrl( &up->port, mctrl );
+		if( TIOCSRS485_mode[up->pdev->id] ){
+	 
+			if (uart_circ_empty(xmit) || uart_tx_stopped(&up->port)) {
+				return;			
+			}
+
+			if( (up->mcr & UART_MCR_RTS) == 0 ){
+				up->mcr |= UART_MCR_RTS; // on
+				serial_out(up, UART_MCR, up->mcr);
+#if defined(CONFIG_MACH_MC34X_ENABLE_UART_CTS_LOOPBACK_CHECK)
+				do{
+					msr = serial_in(up, UART_MSR);
+					up->msr_saved_flags |= msr & MSR_SAVE_FLAGS;
+					udelay(1);
+				}while( !(msr & UART_MSR_CTS) );
+#endif				
+			}	
 		}
-	 }
 	}
+
 	if (up->port.x_char) {
 		serial_out(up, UART_TX, up->port.x_char);
 		up->port.icount.tx++;
@@ -318,18 +373,49 @@ static void transmit_chars(struct uart_omap_port *up)
 		serial_omap_stop_tx(&up->port);
 		return;
 	}
-	count = up->port.fifosize / 4;
-	do {
-		serial_out(up, UART_TX, xmit->buf[xmit->tail]);
-		xmit->tail = (xmit->tail + 1) & (UART_XMIT_SIZE - 1);
-		up->port.icount.tx++;
-		if (uart_circ_empty(xmit))
-			break;
-	} while (--count > 0);
+// update 2018.06.09 : It sets wait time of half duplex.
+	if( TIOCSRS485_mode[up->pdev->id] ){
+		do{		
+			if( *lsr & BOTH_EMPTY ){
+				serial_out(up, UART_TX, xmit->buf[xmit->tail]);
+				xmit->tail = (xmit->tail + 1) & (UART_XMIT_SIZE - 1);
+				up->port.icount.tx++;	
+			}
+			*lsr = serial_in(up, UART_LSR);
+		}while( !(uart_circ_empty(xmit))  );
+	
+		if( (up->mcr & UART_MCR_RTS) ){		
+	 		while ( (*lsr & BOTH_EMPTY) != BOTH_EMPTY ){
+				udelay( (USEC_PER_SEC / for_TIOCSRS485_baud_rate[up->pdev->id] ) * 4  ); // 4 bit baud time delay 
+				*lsr = serial_in(up, UART_LSR);
+			}
 
-	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
-		uart_write_wakeup(&up->port);
+			up->mcr &= ~UART_MCR_RTS; // off
+			serial_out(up, UART_MCR, up->mcr);
 
+#if defined(CONFIG_MACH_MC34X_ENABLE_UART_CTS_LOOPBACK_CHECK)
+			do{
+				msr = serial_in(up, UART_MSR);
+				up->msr_saved_flags |= msr & MSR_SAVE_FLAGS;
+
+				udelay(1);
+			}while( (msr & UART_MSR_CTS) );
+#endif			
+		}
+
+	}else{	
+		count = up->port.fifosize / 4;
+		do {
+			serial_out(up, UART_TX, xmit->buf[xmit->tail]);
+			xmit->tail = (xmit->tail + 1) & (UART_XMIT_SIZE - 1);
+			up->port.icount.tx++;
+			if (uart_circ_empty(xmit))
+				break;
+		} while (--count > 0);
+
+		if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
+			uart_write_wakeup(&up->port);
+	}
 	if (uart_circ_empty(xmit))
 		serial_omap_stop_tx(&up->port);
 }
@@ -456,7 +542,9 @@ static inline irqreturn_t serial_omap_irq(int irq, void *dev_id)
 
 	spin_lock_irqsave(&up->port.lock, flags);
 	lsr = serial_in(up, UART_LSR);
-	if (iir & UART_IIR_RLSI) {
+// update 2018.06.09 : It sets wait time of half duplex.	
+//	if (iir & UART_IIR_RLSI) {
+	if ( iir & UART_IIR_RDI ) {	
 		if (!up->use_dma) {
 			if (lsr & UART_LSR_DR)
 				receive_chars(up, &lsr);
@@ -471,7 +559,7 @@ static inline irqreturn_t serial_omap_irq(int irq, void *dev_id)
 
 	check_modem_status(up);
 	if ((lsr & UART_LSR_THRE) && (iir & UART_IIR_THRI))
-		transmit_chars(up);
+		transmit_chars(up, &lsr);// update 2018.06.09 : It sets wait time of half duplex.
 
 	spin_unlock_irqrestore(&up->port.lock, flags);
 	pm_runtime_mark_last_busy(&up->pdev->dev);
@@ -527,8 +615,11 @@ static void serial_omap_set_mctrl(struct uart_port *port, unsigned int mctrl)
 	unsigned char mcr = 0, old_mcr, lcr;
 
 	dev_dbg(up->port.dev, "serial_omap_set_mctrl+%d\n", up->port.line);
-	if (mctrl & TIOCM_RTS)
-		mcr |= UART_MCR_RTS;
+// update 2018.06.09 : When half duplex is set, it can not set RTS line.
+	if( !TIOCSRS485_mode[up->pdev->id] ){	
+		if (mctrl & TIOCM_RTS)
+			mcr |= UART_MCR_RTS;
+	}
 	if (mctrl & TIOCM_DTR)
 		mcr |= UART_MCR_DTR;
 	if (mctrl & TIOCM_OUT1)
@@ -558,7 +649,11 @@ static void serial_omap_set_mctrl(struct uart_port *port, unsigned int mctrl)
 */
 	old_mcr = serial_in(up, UART_MCR);
 	old_mcr &= ~(UART_MCR_LOOP | UART_MCR_OUT2 | UART_MCR_OUT1 |
-					UART_MCR_DTR | UART_MCR_RTS);
+					UART_MCR_DTR );
+// update 2018.06.09 : When half duplex is set, it can not set RTS line.				
+	if( !TIOCSRS485_mode[up->pdev->id] ){
+		old_mcr &= ~( UART_MCR_RTS );
+	}
 	up->mcr = old_mcr | mcr;
 
 	serial_out(up, UART_MCR, up->mcr);
@@ -680,10 +775,12 @@ static void serial_omap_shutdown(struct uart_port *port)
 	up->port.mctrl &= ~TIOCM_OUT2;
 
 	// update 2017.12.14 After the closeing serial port uses halfduplex, the other device can not communicate.
-	if( up->pdev->id ==0 || up->pdev->id == 1 ||
-	    up->pdev->id ==3 || up->pdev->id == 5 ){
+	if( up->pdev->id < OMAP_MAX_HSUART_PORTS ){
 		if( TIOCSRS485_mode[up->pdev->id] ){
-			up->port.mctrl &= ~TIOCM_RTS;
+			// update 2018.06.09 : When half duplex is set, it can set off RTS line.	
+			// up->port.mctrl &= ~TIOCM_RTS;
+			up->mcr &= ~UART_MCR_RTS; 
+			serial_out( up, UART_MCR, up->mcr );// off;
 		}
 	}
 
@@ -794,7 +891,8 @@ serial_omap_set_termios(struct uart_port *port, struct ktermios *termios,
 	unsigned long flags = 0;
 	unsigned int baud, quot;
 
-	if( up->pdev->id == 1 ){
+	// update 2018.06.09 : Change uart port less than 6.
+	if( up->pdev->id < OMAP_MAX_HSUART_PORTS ){
 		int baud_rate=9600;
 		int cbaud = ( termios->c_cflag ) & CBAUD;
 		switch( cbaud ){
@@ -868,6 +966,7 @@ serial_omap_set_termios(struct uart_port *port, struct ktermios *termios,
 	up->dlh = quot >> 8;
 	up->mdr1 = UART_OMAP_MDR1_DISABLE;
 
+	// FIFO TRIGGER Setting ( 16 / 32 / 56 / 60 )
 	up->fcr = UART_FCR_R_TRIG_01 | UART_FCR_T_TRIG_01 |
 			UART_FCR_ENABLE_FIFO;
 	if (up->use_dma)
@@ -1090,7 +1189,7 @@ serial_omap_type(struct uart_port *port)
 	return up->name;
 }
 
-#define BOTH_EMPTY (UART_LSR_TEMT | UART_LSR_THRE)
+// #define BOTH_EMPTY (UART_LSR_TEMT | UART_LSR_THRE)
 
 static inline void wait_for_xmitr(struct uart_omap_port *up)
 {
@@ -1272,15 +1371,35 @@ serial_omap_ioctl(struct uart_port *port, unsigned int cmd, unsigned long arg)
 		// printk(KERN_NOTICE 
 		//  	"[%s](%d) debug in TIOCSRS485 port[%d], set arg[%d]", __FILE__, __LINE__, 
 		//  		up->pdev->id, arg );
-		if( up->pdev->id == 1 ||
-		    up->pdev->id == 3 ||
-		    up->pdev->id == 5
-		){
-			unsigned int mctrl;
-			TIOCSRS485_mode[up->pdev->id]=arg;
-			mctrl=serial_omap_get_mctrl( port );
-			mctrl &= (~TIOCM_RTS); // RTS off
-			serial_omap_set_mctrl( port, mctrl );
+		
+		// update 2018.06.09 : Change uart port less than 6.
+		if( up->pdev->id < OMAP_MAX_HSUART_PORTS )
+		{
+			unsigned long flags = 0;
+			dev_dbg(up->port.dev,"dup : %lx \n", arg);
+			if( TIOCSRS485_mode[up->pdev->id] != arg ){
+				spin_lock_irqsave(&up->port.lock, flags);
+
+				up->mcr = serial_in(up, UART_MCR);
+				switch( arg ){
+				case 1 :
+					//up->scr &= ~OMAP_UART_SCR_TX_EMPTY;
+					up->mcr &= (~UART_MCR_RTS); // RTS off
+					break;
+				case 0 : //full duplex
+					//up->scr |= OMAP_UART_SCR_TX_EMPTY;
+					up->mcr |= UART_MCR_RTS; // RTS on
+					break;
+				default: //Error!
+					spin_unlock_irqrestore(&up->port.lock, flags);
+					return -EFAULT;
+				}
+
+				TIOCSRS485_mode[up->pdev->id] = arg;
+				//serial_out( up, UART_OMAP_SCR, up->scr );// on					
+				serial_out( up, UART_MCR, up->mcr );// on
+				spin_unlock_irqrestore(&up->port.lock, flags);
+			}
 		}
 		break;
 	default:
