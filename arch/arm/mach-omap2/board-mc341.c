@@ -76,7 +76,7 @@
 // update 2018.01.11           (1) Fixed Date 2017.12.14. After the closeing serial port uses halfduplex, the other device can not communicate.( omap-serial.c )
 // update 2018.01.19 Ver.2.1.9 (1) Change 8188eu driver. Do not use 8188eu-v4.3.0.8_13968.It uses rtl8188eu driver.(lwfinger makeing driver)
 // update 2018.03.04           (1) Add SV-MCD-MC341.
-// update 2018.03.26           (1) Fixed SV-MCD-MC341.(Install SD)
+// update 2018.03.26 Ver.2.2.0 (1) Fixed SV-MCD-MC341.(Install SD)
 // update 2018.06.05           (1) Fixed halfduplex sending and reciveing.(omap-serial.c)
 //#define MC341LAN2 (1)
 #define MC341
@@ -85,8 +85,8 @@
 */
 #endif
 
-// update 2018.03.26
-#define CPS_KERNEL_VERSION "Ver.2.2.0 (build: 2018/06/09) "
+// update 2018.06.09
+#define CPS_KERNEL_VERSION "Ver.2.2.1 (build: 2018/06/09) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>
