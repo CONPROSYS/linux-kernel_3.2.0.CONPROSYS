@@ -48,8 +48,12 @@
 #define GPIO_TO_PIN(bank, gpio) (32 * (bank) + (gpio))
 // update 2015.02.28 LED ctrl update
 // #define LAN_SPEED_LED0 GPIO_TO_PIN(1, 6) // for LAN1
+#ifndef CONFIG_MACH_MC341B00 //2018.03.04 (1)
 #define LAN_SPEED_LED0 GPIO_TO_PIN(3, 19)
 #define LAN_SPEED_LED1 GPIO_TO_PIN(3, 20)
+#else
+#define LAN_SPEED_LED0 GPIO_TO_PIN(1, 6)
+#endif
 void phy_print_status(struct phy_device *phydev)
 {
 int ret;
@@ -81,6 +85,7 @@ static int led1=1;
 		gpio_direction_output(LAN_SPEED_LED0, 0); // off
   }
 // update 2015.02.28 LED ctrl update
+#ifndef CONFIG_MACH_MC341B00 //2018.03.04 (1)
   if( memcmp( dev_name(&phydev->dev), "0:01", 4 )==0 ){
 	if( led1 ){
 	  ret = gpio_request(LAN_SPEED_LED1, "LAN_SPEED_LED1");
@@ -96,7 +101,7 @@ static int led1=1;
 	else
 		gpio_direction_output(LAN_SPEED_LED1, 0); // off
   }
-
+#endif
 }
 EXPORT_SYMBOL(phy_print_status);
 

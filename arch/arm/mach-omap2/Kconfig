@@ -360,7 +360,7 @@ choice
 	Select these modules.
 
 config MACH_MC341B00
-	bool "MCD-MC341"
+	bool "SV-MCD-MC341"
 	depends on SOC_OMAPAM33XX
 
 config MACH_MC341B10
