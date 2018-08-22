@@ -78,6 +78,7 @@
 // update 2018.03.04           (1) Add SV-MCD-MC341.
 // update 2018.03.26 Ver.2.2.0 (1) Fixed SV-MCD-MC341.(Install SD)
 // update 2018.06.05           (1) Fixed halfduplex sending and reciveing.(omap-serial.c)
+// update 2018.08.10           (1) Fixed CPS-MCS341's I2C1 to enable.
 //#define MC341LAN2 (1)
 #define MC341
 #ifndef MC341
@@ -85,8 +86,8 @@
 */
 #endif
 
-// update 2018.06.09
-#define CPS_KERNEL_VERSION "Ver.2.2.1 (build: 2018/06/09) "
+// update 2018.08.22
+#define CPS_KERNEL_VERSION "Ver.2.2.2 (build: 2018/08/22) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -2364,8 +2365,9 @@ static void __init mc341_i2c_init(void)
 	omap_register_i2c_bus(1, 100, mc341_i2c0_boardinfo,
 				ARRAY_SIZE(mc341_i2c0_boardinfo));
 
+// udpate 2018.08.10 enable CONFIG_MACH_MC342B00
 // update 2015.03.16 RFID add
-#if !defined(CONFIG_MACH_MC342B00) && !defined(CONFIG_MACH_MC342B20) && !defined(CONFIG_MACH_MC341B00)
+#if !defined(CONFIG_MACH_MC342B20) && !defined(CONFIG_MACH_MC341B00)
 	setup_pin_mux(mc341_i2c1_pin_mux);
 
 if(0){
