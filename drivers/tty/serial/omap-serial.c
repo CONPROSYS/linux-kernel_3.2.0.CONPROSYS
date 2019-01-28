@@ -43,12 +43,14 @@
 #include <plat/dma.h>
 #include <plat/dmtimer.h>
 #include <plat/omap-serial.h>
+#include <linux/uaccess.h> 
 
 #define DEFAULT_CLK_SPEED 48000000 /* 48Mhz*/
 
 static struct uart_omap_port *ui[OMAP_MAX_HSUART_PORTS];
 static unsigned long TIOCSRS485_mode[6]={0,0,0,0,0,0};
 static int for_TIOCSRS485_baud_rate[6]={9600, 9600, 9600, 9600, 9600, 9600};
+static struct serial_rs485	uart_omap_rs485_config[OMAP_MAX_HSUART_PORTS];
 
 /* Forward declaration of functions */
 static void uart_tx_dma_callback(int lch, u16 ch_status, void *data);
@@ -150,6 +152,46 @@ static void serial_omap_stop_tx(struct uart_port *port)
 	}
 
 	pm_runtime_get_sync(&up->pdev->dev);
+
+	if (up->pdev->id == 1 ||
+	    up->pdev->id == 3 ||
+	    up->pdev->id == 5) {
+		if (TIOCSRS485_mode[up->pdev->id]) {
+			if (up->scr & OMAP_UART_SCR_TX_EMPTY) {
+				unsigned int		cur_mctrl;
+				unsigned int		new_mctrl;
+				struct serial_rs485	*rs485_config = &uart_omap_rs485_config[up->pdev->id];
+
+				up->scr &= ~OMAP_UART_SCR_TX_EMPTY;
+				serial_out(up, UART_OMAP_SCR, up->scr);
+
+				cur_mctrl = (up->mcr & UART_MCR_RTS)  ? TIOCM_RTS  : 0;
+				new_mctrl = (rs485_config->flags & SER_RS485_RTS_AFTER_SEND)  ? TIOCM_RTS  : 0;
+
+				if ((cur_mctrl & TIOCM_RTS) != (new_mctrl & TIOCM_RTS)) {
+					if (rs485_config->delay_rts_after_send > 0) {
+						mdelay(rs485_config->delay_rts_after_send);
+					}
+					else {
+						udelay((USEC_PER_SEC / for_TIOCSRS485_baud_rate[up->pdev->id]) * 4); // 4 bit baud time delay 
+					}
+
+					up->port.mctrl &= ~TIOCM_RTS;
+					up->port.mctrl |= (new_mctrl & TIOCM_RTS);
+					serial_omap_set_mctrl(&up->port, up->port.mctrl);
+				}
+			}
+			else {
+				up->scr |= OMAP_UART_SCR_TX_EMPTY;
+				serial_out(up, UART_OMAP_SCR, up->scr);
+
+				pm_runtime_mark_last_busy(&up->pdev->dev);
+				pm_runtime_put_autosuspend(&up->pdev->dev);
+				return;
+			}
+		}
+	}
+
 	if (up->ier & UART_IER_THRI) {
 		up->ier &= ~UART_IER_THRI;
 		serial_out(up, UART_IER, up->ier);
@@ -157,40 +199,6 @@ static void serial_omap_stop_tx(struct uart_port *port)
 
 	pm_runtime_mark_last_busy(&up->pdev->dev);
 	pm_runtime_put_autosuspend(&up->pdev->dev);
-
-	if( up->pdev->id == 1 ||
-	    up->pdev->id == 3 ||
-	    up->pdev->id == 5
-		){
-		if( TIOCSRS485_mode[up->pdev->id] ){
-			// #define UART_LSR_TEMT		0x40 // Transmitter empty
-			unsigned long flags = 0;
-			unsigned int ret = 0;
-			unsigned int mctrl;
-
-			// printk(KERN_NOTICE 
-			//   "[%s](%d) debug in serial_omap_stop_tx id[%d]", __FILE__, __LINE__, up->pdev->id );
-			#define BOTH_EMPTY (UART_LSR_TEMT | UART_LSR_THRE)
-			// #define TIOCSER_TEMT	0x01	/* Transmitter physically empty */
-			while(1){
-				udelay(1);
-				spin_lock_irqsave(&up->port.lock, flags);
-		 		// ret = serial_in(up, UART_LSR) & UART_LSR_TEMT ? TIOCSER_TEMT : 0;
-		 		ret = serial_in(up, UART_LSR) & BOTH_EMPTY ? TIOCSER_TEMT : 0;
-				spin_unlock_irqrestore(&up->port.lock, flags);
-				if( ret ) break;
-			}
-			// udelay(1000); // 1msec
-			// (9600 * 1000 )/2400=4000 // 4msec
-			// (9600 * 1000 )/9600= 1000 // 1msec
-			// (9600 * 1000 )/115200=83 // 0.083msec
-			// udelay( (9600 * 1000)/for_TIOCSRS485_baud_rate[up->pdev->id] );
-			udelay( (10560 * 1000)/for_TIOCSRS485_baud_rate[up->pdev->id] ); // 9600*1.1=10560
-			mctrl=serial_omap_get_mctrl( port );
-			mctrl &= (~TIOCM_RTS); // RTS off
-			serial_omap_set_mctrl( port, mctrl );
-		}
-	}
 }
 
 static void serial_omap_stop_rx(struct uart_port *port)
@@ -200,26 +208,11 @@ static void serial_omap_stop_rx(struct uart_port *port)
 	pm_runtime_get_sync(&up->pdev->dev);
 	if (up->use_dma)
 		serial_omap_stop_rxdma(up);
-	up->ier &= ~UART_IER_RLSI;
+	up->ier &= ~(UART_IER_RLSI | UART_IER_RDI);
 	up->port.read_status_mask &= ~UART_LSR_DR;
 	serial_out(up, UART_IER, up->ier);
 	pm_runtime_mark_last_busy(&up->pdev->dev);
 	pm_runtime_put_autosuspend(&up->pdev->dev);
-
-	if( up->pdev->id ==0 || up->pdev->id == 1 ||
-	    up->pdev->id ==3 || up->pdev->id == 5 ){
-		if( TIOCSRS485_mode[up->pdev->id] ){
-			unsigned int mctrl;
-//			printk(KERN_NOTICE 
-//			   "[%s](%d) debug in transmit_chars RTS on, id[%d]", __FILE__, __LINE__, up->pdev->id );
-			mctrl=serial_omap_get_mctrl( &up->port );
-			if( (mctrl & TIOCM_RTS) == 0 ){
-				mctrl |= TIOCM_RTS; // on
-// KOKO 2015.01.09
-//				serial_omap_set_mctrl( &up->port, mctrl );
-			}
-		}
-	}
 }
 
 static inline void receive_chars(struct uart_omap_port *up,
@@ -295,19 +288,6 @@ static void transmit_chars(struct uart_omap_port *up)
 	struct circ_buf *xmit = &up->port.state->xmit;
 	int count;
 
-	if( up->pdev->id == 1 ||
-	    up->pdev->id == 3 ||
-	    up->pdev->id == 5
-	){
-	 if( TIOCSRS485_mode[up->pdev->id] ){
-		unsigned int mctrl;
-		mctrl=serial_omap_get_mctrl( &up->port );
-		if( (mctrl & TIOCM_RTS)==0 ){
-			mctrl |= TIOCM_RTS; // on
-			serial_omap_set_mctrl( &up->port, mctrl );
-		}
-	 }
-	}
 	if (up->port.x_char) {
 		serial_out(up, UART_TX, up->port.x_char);
 		up->port.icount.tx++;
@@ -348,6 +328,32 @@ static void serial_omap_start_tx(struct uart_port *port)
 	struct circ_buf *xmit;
 	unsigned int start;
 	int ret = 0;
+
+	if (up->pdev->id == 1 ||
+	    up->pdev->id == 3 ||
+	    up->pdev->id == 5) {
+		if (TIOCSRS485_mode[up->pdev->id]) {
+			unsigned int		cur_mctrl;
+			unsigned int		new_mctrl;
+			struct serial_rs485	*rs485_config = &uart_omap_rs485_config[up->pdev->id];
+
+			up->scr &= ~OMAP_UART_SCR_TX_EMPTY;
+			serial_out(up, UART_OMAP_SCR, up->scr);
+
+			cur_mctrl = (up->mcr & UART_MCR_RTS)  ? TIOCM_RTS  : 0;
+			new_mctrl = (rs485_config->flags & SER_RS485_RTS_ON_SEND)  ? TIOCM_RTS  : 0;
+
+			if ((cur_mctrl & TIOCM_RTS) != (new_mctrl & TIOCM_RTS)) {
+				up->port.mctrl &= ~TIOCM_RTS;
+				up->port.mctrl |= (new_mctrl & TIOCM_RTS);
+				serial_omap_set_mctrl(&up->port, up->port.mctrl);
+
+				if (rs485_config->delay_rts_before_send > 0) {
+					mdelay(rs485_config->delay_rts_before_send);
+				}
+			}
+		}
+	}
 
 	if (!up->use_dma) {
 		pm_runtime_get_sync(&up->pdev->dev);
@@ -414,6 +420,15 @@ static unsigned int check_modem_status(struct uart_omap_port *up)
 	status = serial_in(up, UART_MSR);
 	status |= up->msr_saved_flags;
 	up->msr_saved_flags = 0;
+
+	if (up->pdev->id == 1 ||
+	    up->pdev->id == 3 ||
+	    up->pdev->id == 5) {
+		if (TIOCSRS485_mode[up->pdev->id]) {
+			status |= UART_MSR_CTS;
+		}
+	}
+
 	if ((status & UART_MSR_ANY_DELTA) == 0)
 		return status;
 
@@ -524,7 +539,7 @@ static unsigned int serial_omap_get_mctrl(struct uart_port *port)
 static void serial_omap_set_mctrl(struct uart_port *port, unsigned int mctrl)
 {
 	struct uart_omap_port *up = (struct uart_omap_port *)port;
-	unsigned char mcr = 0, old_mcr, lcr;
+	unsigned char mcr = 0, old_mcr;
 
 	dev_dbg(up->port.dev, "serial_omap_set_mctrl+%d\n", up->port.line);
 	if (mctrl & TIOCM_RTS)
@@ -565,6 +580,25 @@ static void serial_omap_set_mctrl(struct uart_port *port, unsigned int mctrl)
 	// pm_runtime_put(&up->pdev->dev);
 	pm_runtime_mark_last_busy(&up->pdev->dev);
 	pm_runtime_put_autosuspend(&up->pdev->dev);
+}
+
+static void serial_omap_set_mctrl_extcall(struct uart_port *port, unsigned int mctrl)
+{
+	struct uart_omap_port *up = (struct uart_omap_port *)port;
+
+	if (up->pdev->id == 1 ||
+	    up->pdev->id == 3 ||
+	    up->pdev->id == 5) {
+		if (TIOCSRS485_mode[up->pdev->id]) {
+			unsigned int	cur_mctrl;
+
+			cur_mctrl = (up->mcr & UART_MCR_RTS)  ? TIOCM_RTS  : 0;
+			mctrl &= ~TIOCM_RTS;
+			mctrl |= (cur_mctrl & TIOCM_RTS);
+		}
+	}
+
+	serial_omap_set_mctrl(port, mctrl);
 }
 
 static void serial_omap_break_ctl(struct uart_port *port, int break_state)
@@ -794,6 +828,14 @@ serial_omap_set_termios(struct uart_port *port, struct ktermios *termios,
 	unsigned long flags = 0;
 	unsigned int baud, quot;
 
+	if (up->pdev->id == 1 ||
+	    up->pdev->id == 3 ||
+	    up->pdev->id == 5) {
+		if (TIOCSRS485_mode[up->pdev->id]) {
+			termios->c_cflag &= ~CRTSCTS;
+		}
+	}
+
 	if( up->pdev->id == 1 ){
 		int baud_rate=9600;
 		int cbaud = ( termios->c_cflag ) & CBAUD;
@@ -1012,6 +1054,19 @@ serial_omap_set_termios(struct uart_port *port, struct ktermios *termios,
 		serial_out(up, UART_LCR, UART_LCR_CONF_MODE_A);
 		serial_out(up, UART_MCR, up->mcr | UART_MCR_RTS);
 		serial_out(up, UART_LCR, cval);
+	}
+
+	if (up->pdev->id == 1 ||
+	    up->pdev->id == 3 ||
+	    up->pdev->id == 5) {
+		if (TIOCSRS485_mode[up->pdev->id]) {
+			unsigned int		new_mctrl;
+			struct serial_rs485	*rs485_config = &uart_omap_rs485_config[up->pdev->id];
+
+			new_mctrl = (rs485_config->flags & SER_RS485_RTS_AFTER_SEND)  ? TIOCM_RTS  : 0;
+			up->port.mctrl &= ~TIOCM_RTS;
+			up->port.mctrl |= (new_mctrl & TIOCM_RTS);
+		}
 	}
 
 	serial_omap_set_mctrl(&up->port, up->port.mctrl);
@@ -1276,11 +1331,60 @@ serial_omap_ioctl(struct uart_port *port, unsigned int cmd, unsigned long arg)
 		    up->pdev->id == 3 ||
 		    up->pdev->id == 5
 		){
-			unsigned int mctrl;
-			TIOCSRS485_mode[up->pdev->id]=arg;
-			mctrl=serial_omap_get_mctrl( port );
-			mctrl &= (~TIOCM_RTS); // RTS off
-			serial_omap_set_mctrl( port, mctrl );
+			unsigned int		new_mctrl;
+			struct serial_rs485	*rs485_config = &uart_omap_rs485_config[up->pdev->id];
+
+			if (arg <= 1) {
+				TIOCSRS485_mode[up->pdev->id] = arg;
+
+				if (TIOCSRS485_mode[up->pdev->id]) {
+					rs485_config->flags |= SER_RS485_ENABLED | SER_RS485_RTS_ON_SEND;
+				}
+				else {
+					rs485_config->flags = 0;
+				}
+			}
+			else {
+				if (!access_ok(VERIFY_READ, (struct serial_rs485 *)arg, sizeof(struct serial_rs485))) {
+					return -EFAULT;
+				}
+				if (copy_from_user(rs485_config, (struct serial_rs485 *)arg, sizeof(struct serial_rs485))) {
+					return -EFAULT;
+				}
+
+				if (rs485_config->flags & SER_RS485_ENABLED) {
+					TIOCSRS485_mode[up->pdev->id] = 1;
+				}
+				else {
+					TIOCSRS485_mode[up->pdev->id] = 0;
+				}
+				rs485_config->flags &= 0xFF;
+			}
+
+			rs485_config->delay_rts_before_send = min(rs485_config->delay_rts_before_send, 100U);
+			rs485_config->delay_rts_after_send  = min(rs485_config->delay_rts_after_send, 100U);
+
+			new_mctrl = (rs485_config->flags & SER_RS485_RTS_AFTER_SEND)  ? TIOCM_RTS  : 0;
+			up->port.mctrl &= ~TIOCM_RTS;
+			up->port.mctrl |= (new_mctrl & TIOCM_RTS);
+			serial_omap_set_mctrl(&up->port, up->port.mctrl);
+
+			/* If RS-485 is disabled, make sure the THR interrupt is fired when
+			 * TX FIFO is below the trigger level.
+			 */
+			if (!(rs485_config->flags & SER_RS485_ENABLED) &&
+				(up->scr & OMAP_UART_SCR_TX_EMPTY)) {
+				up->scr &= ~OMAP_UART_SCR_TX_EMPTY;
+				serial_out(up, UART_OMAP_SCR, up->scr);
+			}
+		}
+		break;
+	case TIOCGRS485:
+		if (!access_ok(VERIFY_WRITE, (struct serial_rs485 *)arg, sizeof(struct serial_rs485))) {
+			return -EFAULT;
+		}
+		if (copy_to_user((struct serial_rs485 *) arg, &uart_omap_rs485_config[up->pdev->id], sizeof(struct serial_rs485))) {
+			return -EFAULT;
 		}
 		break;
 	default:
@@ -1291,7 +1395,7 @@ serial_omap_ioctl(struct uart_port *port, unsigned int cmd, unsigned long arg)
 
 static struct uart_ops serial_omap_pops = {
 	.tx_empty	= serial_omap_tx_empty,
-	.set_mctrl	= serial_omap_set_mctrl,
+	.set_mctrl	= serial_omap_set_mctrl_extcall,
 	.get_mctrl	= serial_omap_get_mctrl,
 	.stop_tx	= serial_omap_stop_tx,
 	.start_tx	= serial_omap_start_tx,
@@ -1614,6 +1718,8 @@ static int serial_omap_probe(struct platform_device *pdev)
 	pm_runtime_irq_safe(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
 	pm_runtime_get_sync(&pdev->dev);
+
+	memset(&uart_omap_rs485_config, 0, sizeof(uart_omap_rs485_config));
 
 	ui[up->port.line] = up;
 	serial_omap_add_console_port(up);
