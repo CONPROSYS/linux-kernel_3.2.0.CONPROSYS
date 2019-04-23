@@ -3,14 +3,38 @@ language: C
 sudo:
   - required
 
-os:
-  - linux
+os : 
+  - linux 
 
-dist:
+dist :
   - trusty
+#  - xenial
+
+
+branches :
+  except :
+    - /^WIP_.*/
+
 
 compiler:
-  - gcc
+  - arm-linux-gnueabi-gcc-4.7 
+  - arm-linux-gnueabi-gcc-5 
+env:
+  - DEFCONF=CPS-MC341-ADSCX.novlan_defconfig
+  - DEFCONF=CPS-MC341-ADSCX.1lan_defconfig
+  - DEFCONF=CPS-MC341-ADSCX.2lan_defconfig
+  - DEFCONF=CPS-MC341-DSX.novlan_defconfig
+  - DEFCONF=CPS-MC341-DSX.1lan_defconfig
+  - DEFCONF=CPS-MC341-DSX.2lan_defconfig
+  - DEFCONF=CPS-MC341-AX.novlan_defconfig
+  - DEFCONF=CPS-MC341-AX.1lan_defconfig
+  - DEFCONF=CPS-MC341-AX.2lan_defconfig
+  - DEFCONF=CPS-MC341-DS1X.novlan_defconfig
+  - DEFCONF=CPS-MC341-DS1X.1lan_defconfig
+  - DEFCONF=CPS-MC341-DS1X.2lan_defconfig        
+  - DEFCONF=CPS-MCS341-DSX.novlan_defconfig
+  - DEFCONF=CPS-MCS341-DSX.1lan_defconfig
+  - DEFCONF=CPS-MCS341-DSX.2lan_defconfig
 
 before_install:
   # apt-get install
@@ -23,11 +47,13 @@ before_install:
 
 script:
   - ls /usr/bin/arm* 
+  # Test 
   - make distclean
-  - make defconfig CPS-MCS341-DSX.novlan_defconfig
+  - make defconfig $DEFCONF
   - make prepare
   - make -j$JOB_NUMBER uImage
   - sudo make -j$JOB_NUMBER modules
-  - sudo make -j$JOB_NUMBER modules_install 
+  - sudo make -j$JOB_NUMBER modules_install
+ 
 after_script:
 

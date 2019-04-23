@@ -638,6 +638,8 @@ static struct usb_device_id id_table_combined [] = {
 	{ USB_DEVICE(FTDI_VID, FTDI_RM_CANVIEW_PID) },
 	{ USB_DEVICE(ACTON_VID, ACTON_SPECTRAPRO_PID) },
 	{ USB_DEVICE(CONTEC_VID, CONTEC_COM1USBH_PID) },
+	{ USB_DEVICE(CONTEC_VID, CONTEC_COM1PUSBH_PID) },	// update
+	{ USB_DEVICE(CONTEC_VID, CONTEC_COM1PDUSBH_PID) },// update
 	{ USB_DEVICE(BANDB_VID, BANDB_USOTL4_PID) },
 	{ USB_DEVICE(BANDB_VID, BANDB_USTL4_PID) },
 	{ USB_DEVICE(BANDB_VID, BANDB_USO9ML2_PID) },
@@ -841,6 +843,7 @@ static struct usb_device_id id_table_combined [] = {
 		.driver_info = (kernel_ulong_t)&ftdi_jtag_quirk },
 	{ USB_DEVICE(ST_VID, ST_STMCLT1030_PID),
 		.driver_info = (kernel_ulong_t)&ftdi_stmclite_quirk },
+	{ USB_DEVICE(MITUTOYO_VID, MITUTOYO_U_WAVE_R_PID)},
 	{ },					/* Optional parameter entry */
 	{ }					/* Terminating entry */
 };

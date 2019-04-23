@@ -2,7 +2,7 @@
  * vendor/product IDs (VID/PID) of devices using FTDI USB serial converters.
  * Please keep numerically sorted within individual areas, thanks!
  *
- * Philipp Gühring - pg@futureware.at - added the Device ID of the USB relais
+ * Philipp Gï¿½hring - pg@futureware.at - added the Device ID of the USB relais
  * from Rudolf Gugler
  *
  */
@@ -78,7 +78,7 @@
  */
 #define FTDI_ASK_RDR400_PID	0xC991	/* ASK RDR 400 series card reader */
 
-/* www.starting-point-systems.com µChameleon device */
+/* www.starting-point-systems.com ï¿½Chameleon device */
 #define FTDI_MICRO_CHAMELEON_PID	0xCAA0	/* Product Id */
 
 /*
@@ -291,7 +291,7 @@
 
 /*
  * Teratronik product ids.
- * Submitted by O. Wölfelschneider.
+ * Submitted by O. Wï¿½lfelschneider.
  */
 #define FTDI_TERATRONIK_VCP_PID	 0xEC88	/* Teratronik device (preferring VCP driver on windows) */
 #define FTDI_TERATRONIK_D2XX_PID 0xEC89	/* Teratronik device (preferring D2XX driver on windows) */
@@ -537,11 +537,13 @@
 #define ACTON_SPECTRAPRO_PID	0x0100
 
 /*
- * Contec products (http://www.contec.com)
+ * Contec products (https://www.contec.com)
  * Submitted by Daniel Sangorrin
  */
 #define CONTEC_VID		0x06CE	/* Vendor ID */
 #define CONTEC_COM1USBH_PID	0x8311	/* COM-1(USB)H */
+#define CONTEC_COM1PUSBH_PID	0x8321	/* COM-1P(USB)H */
+#define CONTEC_COM1PDUSBH_PID	0x8331	/* COM-1PD(USB)H */
 
 /*
  * Definitions for B&B Electronics products.
@@ -708,6 +710,14 @@
 /* Larsen and Brusgaard AltiTrack/USBtrack */
 #define LARSENBRUSGAARD_VID		0x0FD8
 #define LB_ALTITRACK_PID		0x0001
+
+/*
+ * 	Mitutoyo Co.,Ltd.(http://www.mitutoyo.com)
+ */
+
+#define MITUTOYO_VID	0x0FE7		/* VENDOR ID */
+
+#define MITUTOYO_U_WAVE_R_PID	0x2002	/* Mitutoyo U-WAVE-R */
 
 /*
  * TTi (Thurlby Thandar Instruments)
