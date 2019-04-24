@@ -415,6 +415,13 @@ config MACH_MC34X_ENABLE_NMI_INTERRUPT
 	help
 	Enable NMI Interrupt pin.
 
+config MACH_MC34X_ENABLE_DUPLICATE_BACKUP
+	bool "Enable Duplicate backup"
+	depends on MACH_MC341B10 || MACH_MC341B30 || MACH_MC341B40 || MACH_MC342B00 || MACH_MC341B50
+	default n
+	help
+	Enable mtd6 duplicate patition mode.(SPI-ROM 64MB only)
+
 #check comments
 ## LAN TYPE
 comment "Check LAN TYPE : 2LAN TYPE"

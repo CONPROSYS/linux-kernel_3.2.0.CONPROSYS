@@ -81,7 +81,8 @@
 // update 2018.11.08 Ver.2.2.2 (1) Update RX485 halfduplex for CODESYS.(omap-serial.c)
 // update 2018.11.27           (1) CONPROSYS defconfig disabled MAGIC_SYSRQ.
 //                             (2) Add products COM-1P(USB)H, COM-1PD(USB)H and U-WAVE-R.
-// update 2019.02.15 Ver.2.3.0 (1) Support DSR/DTR/RI/CD of GPIO.( CPS-MC341-ADSCX )	
+// update 2019.02.15 Ver.2.3.0 (1) Support DSR/DTR/RI/CD of GPIO.( CPS-MC341-ADSCX )
+// update 2019.03.11 Ver.2.3.1 (1) Add CONFIG_MACH_MC34X_ENABLE_DUPLICATE_BACKUP.		
 //#define MC341LAN2 (1)
 #define MC341
 #ifndef MC341
@@ -89,8 +90,8 @@
 */
 #endif
 
-// update 2019.02.15
-#define CPS_KERNEL_VERSION "Ver.2.3.0 (build: 2019.02.15) "
+// update 2019.03.11
+#define CPS_KERNEL_VERSION "Ver.2.3.1 (build: 2019.03.11) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -1110,7 +1111,7 @@ static struct mtd_partition am335x_spi_partitions[] = {
 	},
 	{
 		.name       = "APL Area",
-		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0xDD0000 */
+		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0xDC0000 */
 		.size       = MTDPART_SIZ_FULL,		/* size ~= 20 MiB */
 	}
 };
@@ -1139,19 +1140,52 @@ static struct mtd_partition am335x_spi_partitions_512mb[] = {
 	},
 	{
 		.name       = "Root File System",
-		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0x442000 */
+		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0x440000 */
 		.size       = 76 * SZ_128K,		/* size ~= 10 MiB */
 	},
 	{
 		.name       = "APL Area 1",
-		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0xDD0000 */
+		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0xDC0000 */
 		.size       = 146 * SZ_128K,			/* size = 20 MiB */
 	},
+#ifdef CONFIG_MACH_MC34X_ENABLE_DUPLICATE_BACKUP
+	{
+		.name       = "Config Area",
+		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0x2000000 */
+		.size       = SZ_128K,
+	},
+	{
+		.name       = "Backup U-Boot",
+		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0x2020000 */
+		.size       = 4 * SZ_128K,
+	},
+	{
+		.name       = "Backup U-Boot Env",
+		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0x20A0000 */
+		.size       = 2 * SZ_128K,
+	},
+	{
+		.name       = "Backup Kernel",
+		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0x20E0000 */
+		.size       = 27 * SZ_128K,
+	},
+	{
+		.name       = "Backup Root File System",
+		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0x2440000 */
+		.size       = 76 * SZ_128K,		/* size ~= 10 MiB */
+	},
+	{
+		.name       = "Backup APL Area 1",
+		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0x2DC0000 */
+		.size       = MTDPART_SIZ_FULL,			/* size = 20 MiB */
+	}
+#else
 	{
 		.name       = "APL Area 2",
 		.offset     = MTDPART_OFS_APPEND,
 		.size       = MTDPART_SIZ_FULL,		/* size ~= 32 MiB */
 	}
+#endif
 };
 /*
 static const struct flash_platform_data mc341_spi_flash = {
