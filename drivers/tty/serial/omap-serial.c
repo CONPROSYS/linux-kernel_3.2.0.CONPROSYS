@@ -1216,7 +1216,9 @@ static int serial_omap_poll_get_char(struct uart_port *port)
 
 #ifdef CONFIG_SERIAL_OMAP_CONSOLE
 
-static struct uart_omap_port *serial_omap_console_ports[4];
+//2019.08.21 Change value from 4 to OMAP_MAX_HSUART_PORTS.
+// Overwrite memory of TIOCSRS485_mode[0 and 1] (see. readelf -s omap_serial.o )
+static struct uart_omap_port *serial_omap_console_ports[OMAP_MAX_HSUART_PORTS];
 
 static struct uart_driver serial_omap_reg;
 

@@ -81,7 +81,8 @@
 // update 2018.11.08 Ver.2.2.2 (1) Update RX485 halfduplex for CODESYS.(omap-serial.c)
 // update 2018.11.27           (1) CONPROSYS defconfig disabled MAGIC_SYSRQ.
 //                             (2) Add products COM-1P(USB)H, COM-1PD(USB)H and U-WAVE-R.
-// update 2019.02.15 Ver.2.3.0 (1) Support DSR/DTR/RI/CD of GPIO.( CPS-MC341-ADSCX )	
+// update 2019.02.15 Ver.2.3.0 (1) Support DSR/DTR/RI/CD of GPIO.( CPS-MC341-ADSCX )
+// update 2019.08.21 Ver.2.3.0.1 (1) Bugfix omap-serial.c	
 //#define MC341LAN2 (1)
 #define MC341
 #ifndef MC341
@@ -89,8 +90,8 @@
 */
 #endif
 
-// update 2019.02.15
-#define CPS_KERNEL_VERSION "Ver.2.3.0 (build: 2019.02.15) "
+// update 2019.08.20
+#define CPS_KERNEL_VERSION "Ver.2.3.0.1 (build: 2019.08.21) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>
