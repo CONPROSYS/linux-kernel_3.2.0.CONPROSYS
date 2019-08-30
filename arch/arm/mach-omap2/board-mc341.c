@@ -83,8 +83,9 @@
 //                             (2) Add products COM-1P(USB)H, COM-1PD(USB)H and U-WAVE-R.
 // update 2019.02.15 Ver.2.3.0 (1) Support DSR/DTR/RI/CD of GPIO.( CPS-MC341-ADSCX )
 // update 2019.03.11 Ver.2.3.1 (1) Add CONFIG_MACH_MC34X_ENABLE_DUPLICATE_BACKUP.	
-// update 2019.04.24 Ver.2.3.2 (1) Add product USB_Serial FT230X.	
-// update 2019.08.21 Ver.2.3.0.1 (1) Bugfix omap-serial.c
+// update 2019.04.24 Ver.2.3.2 (1) Add product USB_Serial FT230X.(ftdi_sio.c/)	
+// update 2019.08.22 Ver.2.3.3 (1) Bugfix omap-serial.c 
+// update 2019.08.30 Ver.2.3.4 (1) Bugfix USB_Serial FT230X.And Merge driver/usb/serial for kernel v3.2.102. (ftdi_sio.c and )
 //#define MC341LAN2 (1)
 #define MC341
 #ifndef MC341
@@ -92,8 +93,8 @@
 */
 #endif
 
-// update 2019.08.22
-#define CPS_KERNEL_VERSION "Ver.2.3.3 (build: 2019.08.22) "
+// update 2019.08.30
+#define CPS_KERNEL_VERSION "Ver.2.3.4 (build: 2019.08.30) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>
