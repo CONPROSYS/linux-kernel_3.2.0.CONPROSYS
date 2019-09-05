@@ -82,7 +82,9 @@
 // update 2018.11.27           (1) CONPROSYS defconfig disabled MAGIC_SYSRQ.
 //                             (2) Add products COM-1P(USB)H, COM-1PD(USB)H and U-WAVE-R.
 // update 2019.02.15 Ver.2.3.0 (1) Support DSR/DTR/RI/CD of GPIO.( CPS-MC341-ADSCX )
-// update 2019.08.21 Ver.2.3.0.1 (1) Bugfix omap-serial.c	
+// update 2019.08.21 Ver.2.3.0.1 (1) Bugfix omap-serial.c
+// update 2019.09.05 Ver.2.3.0.2 (1) Bugfix warning wd_timer2 : _omap4_disable_module message.	
+//                                   (Tree : _omap4_disable_module > _omap4_wait_target_disable > omap4_cminst_wait_module_idle )
 //#define MC341LAN2 (1)
 #define MC341
 #ifndef MC341
@@ -91,7 +93,7 @@
 #endif
 
 // update 2019.08.20
-#define CPS_KERNEL_VERSION "Ver.2.3.0.1 (build: 2019.08.21) "
+#define CPS_KERNEL_VERSION "Ver.2.3.0.2 (build: 2019.09.05) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>
