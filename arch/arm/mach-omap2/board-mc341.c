@@ -85,6 +85,8 @@
 // update 2019.08.21 Ver.2.3.0.1 (1) Bugfix omap-serial.c
 // update 2019.09.05 Ver.2.3.0.2 (1) Bugfix warning wd_timer2 : _omap4_disable_module message.	
 //                                   (Tree : _omap4_disable_module > _omap4_wait_target_disable > omap4_cminst_wait_module_idle )
+// update 2019.09.20 Ver.2.3.0.3 (1) Bugfix mc341_reset function.	
+
 //#define MC341LAN2 (1)
 #define MC341
 #ifndef MC341
@@ -92,8 +94,8 @@
 */
 #endif
 
-// update 2019.08.20
-#define CPS_KERNEL_VERSION "Ver.2.3.0.2 (build: 2019.09.05) "
+// update 2019.09.20
+#define CPS_KERNEL_VERSION "Ver.2.3.0.3 (build: 2019.09.20) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -2718,6 +2720,7 @@ static void __init mc341_map_io(void)
 void mc341_restart(char mode, const char *cmd)
 {
 	int ret;
+	char *label;
 
 #if defined(CONFIG_MACH_MC341B00)
 	#define GPIO_RESET_POUT GPIO_TO_PIN( 3, 18 )	//GPIO 114
@@ -2725,15 +2728,20 @@ void mc341_restart(char mode, const char *cmd)
 	#define GPIO_RESET_POUT GPIO_TO_PIN( 3, 9 )		//GPIO 105
 #endif
 
-	
-	gpio_free(GPIO_RESET_POUT);
-	ret = gpio_request(GPIO_RESET_POUT, "GPIO_RESET_POUT");
-	if (!ret) {
-		gpio_direction_output(GPIO_RESET_POUT, 1);
-	}else{
-		pr_err("%s: failed to request GPIO for GPIO_RESET_POUT port "
+	//gpio_free(GPIO_RESET_POUT);
+	label = gpio_is_requested( GPIO_RESET_POUT );
+
+	if( !label ){ // Not Gpio Request
+		ret = gpio_request(GPIO_RESET_POUT, "GPIO_RESET_POUT");
+		if( ret ){ // gpio_request failed.
+			pr_err("%s: failed to request GPIO for GPIO_RESET_POUT port "
 					"gpio control: %d\n", __func__, ret);
+			return;			
+		}
 	}
+	
+	gpio_direction_output( GPIO_RESET_POUT, 1 );
+
 }
 
 // CPS-MC341-ADSCn

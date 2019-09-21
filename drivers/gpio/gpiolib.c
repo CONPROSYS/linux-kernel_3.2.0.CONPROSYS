@@ -1364,6 +1364,24 @@ const char *gpiochip_is_requested(struct gpio_chip *chip, unsigned offset)
 }
 EXPORT_SYMBOL_GPL(gpiochip_is_requested);
 
+// update 2019.09.20 Add gpio_is_requested
+const char *gpio_is_requested( unsigned gpio ){
+
+	struct gpio_chip *chip;
+
+	chip = gpio_to_chip(gpio);
+
+	if (!gpio_is_valid(gpio) || gpio_desc[gpio].chip != chip)
+		return NULL;
+	if (test_bit(FLAG_REQUESTED, &gpio_desc[gpio].flags) == 0)
+		return NULL;
+#ifdef CONFIG_DEBUG_FS
+	return gpio_desc[gpio].label;
+#else
+	return "?";
+#endif
+}
+EXPORT_SYMBOL_GPL(gpio_is_requested);
 
 /* Drivers MUST set GPIO direction before making get/set calls.  In
  * some cases this is done in early boot, before IRQs are enabled.
