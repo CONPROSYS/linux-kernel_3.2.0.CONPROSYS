@@ -48,6 +48,8 @@
 #include <plat/omap-serial.h>
 #include <linux/uaccess.h> 
 
+#include "omap_serial_mctrl_gpio.h"		//update 2019.02.15
+
 #define DEFAULT_CLK_SPEED 48000000 /* 48Mhz*/
 
 #define BOTH_EMPTY (UART_LSR_TEMT | UART_LSR_THRE)
@@ -681,6 +683,8 @@ static unsigned int serial_omap_get_mctrl(struct uart_port *port)
 		ret |= TIOCM_DSR;
 	if (status & UART_MSR_CTS)
 		ret |= TIOCM_CTS;
+	
+	omap_mctrl_gpio_get(up, &ret);	//udpate 2019.02.15
 	return ret;
 }
 
@@ -734,6 +738,9 @@ static void serial_omap_set_mctrl(struct uart_port *port, unsigned int mctrl)
 	up->mcr = old_mcr | mcr;
 
 	serial_out(up, UART_MCR, up->mcr);
+
+	omap_mctrl_gpio_set(up, mctrl);		// update 2019.02.15
+
 	// pm_runtime_put(&up->pdev->dev);
 	pm_runtime_mark_last_busy(&up->pdev->dev);
 	pm_runtime_put_autosuspend(&up->pdev->dev);
@@ -1362,7 +1369,9 @@ static int serial_omap_poll_get_char(struct uart_port *port)
 
 #ifdef CONFIG_SERIAL_OMAP_CONSOLE
 
-static struct uart_omap_port *serial_omap_console_ports[4];
+//2019.08.21 Change value from 4 to OMAP_MAX_HSUART_PORTS.
+// Overwrite memory of TIOCSRS485_mode[0 and 1] (see. readelf -s omap_serial.o )
+static struct uart_omap_port *serial_omap_console_ports[OMAP_MAX_HSUART_PORTS];
 
 static struct uart_driver serial_omap_reg;
 
@@ -1762,6 +1771,7 @@ static int serial_omap_probe(struct platform_device *pdev)
 	struct uart_omap_port	*up;
 	struct resource		*mem, *irq, *dma_tx, *dma_rx;
 	struct omap_uart_port_info *omap_up_info = pdev->dev.platform_data;
+	int cnt = 0;	// update 2019.02.15
 	int ret = -ENOSPC;
 
 	if (pdev->dev.of_node)
@@ -1855,6 +1865,12 @@ static int serial_omap_probe(struct platform_device *pdev)
 		up->uart_dma.tx_dma_channel = OMAP_UART_DMA_CH_FREE;
 		up->uart_dma.rx_dma_channel = OMAP_UART_DMA_CH_FREE;
 	}
+
+	// update 2019.02.15 
+	for( cnt = 0; cnt < OMAP_UART_MCTRL_GPIO_MAX; cnt ++ ){
+		up->gpios[cnt] = omap_up_info->gpios[cnt];
+	}
+	omap_mctrl_gpio_init(up);
 
 	up->latency = PM_QOS_CPU_DMA_LAT_DEFAULT_VALUE;
 	up->calc_latency = PM_QOS_CPU_DMA_LAT_DEFAULT_VALUE;

@@ -422,6 +422,13 @@ config MACH_MC34X_ENABLE_UART_CTS_LOOPBACK_CHECK
 	help
 	Enable RS485 OMAP-UART CTS-LINE CHECKS for HALFDUPLEX RTS-TOGGLE CONTROL MDOE.
 
+config MACH_MC34X_ENABLE_DUPLICATE_BACKUP
+	bool "Enable Duplicate backup"
+	depends on MACH_MC341B10 || MACH_MC341B30 || MACH_MC341B40 || MACH_MC342B00 || MACH_MC341B50
+	default n
+	help
+	Enable mtd6 duplicate patition mode.(SPI-ROM 64MB only)
+
 #check comments
 ## LAN TYPE
 comment "Check LAN TYPE : 2LAN TYPE"

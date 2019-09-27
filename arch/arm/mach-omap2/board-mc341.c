@@ -80,7 +80,17 @@
 // update 2018.06.05           (1) Fixed halfduplex sending and reciveing.(omap-serial.c)
 // update 2018.08.10 Ver.2.2.1 (1) Fixed CPS-MCS341's I2C1 to enable.
 // update 2018.11.08 Ver.2.2.2 (1) Update RX485 halfduplex for CODESYS.(omap-serial.c)
-// update 2019.01.28           (1) Merge 2018.06.05 base Ver.2.2.2.
+// update 2018.11.27           (1) CONPROSYS defconfig disabled MAGIC_SYSRQ.
+//                             (2) Add products COM-1P(USB)H, COM-1PD(USB)H and U-WAVE-R.
+// update 2019.02.15 Ver.2.3.0 (1) Support DSR/DTR/RI/CD of GPIO.( CPS-MC341-ADSCX )
+// update 2019.03.11 Ver.2.3.1 (1) Add CONFIG_MACH_MC34X_ENABLE_DUPLICATE_BACKUP.	
+// update 2019.04.24 Ver.2.3.2 (1) Add product USB_Serial FT230X.(ftdi_sio.c/)	
+// update 2019.08.22 Ver.2.3.3 (1) Bugfix omap-serial.c 
+// update 2019.08.30 Ver.2.3.4 (1) Bugfix USB_Serial FT230X.And Merge driver/usb/serial for kernel v3.2.102. ( ftdi_sio.c / ftdi_sio_ids.c /ftdi_sio.h )
+// update 2019.09.05 Ver.2.3.5 (1) Bugfix warning wd_timer2 : _omap4_disable_module message.	
+//                                   (Tree : _omap4_disable_module > _omap4_wait_target_disable > omap4_cminst_wait_module_idle )
+// update 2019.09.20 Ver.2.3.6 (1) Bugfix mc341_reset function.	
+// update 2019.09.27           (1) Merge 2018.06.05 base Ver.2.3.6.
 //#define MC341LAN2 (1)
 #define MC341
 #ifndef MC341
@@ -88,8 +98,8 @@
 */
 #endif
 
-// update 2018.11.08
-#define CPS_KERNEL_VERSION "Ver.2.2.2 (build: 2018.11.08) "
+// update 2019.09.27
+#define CPS_KERNEL_VERSION "Ver.2.3.6 (build: 2019.09.27) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -146,6 +156,8 @@
 #include <plat/emif.h>
 #include <plat/nand.h>
 #include <plat/gpmc.h>		//update 2015.08.20 mcs341(gpmc) add
+
+#include <plat/omap-serial.h> //update 2019.02.15
 
 #include "board-flash.h"
 #include "cpuidle33xx.h"
@@ -836,6 +848,82 @@ struct wl12xx_platform_data am335xevm_wlan_data = {
 	.wlan_enable_gpio = GPIO_TO_PIN(1, 16),
 };
 
+
+/* UART's structure */ // update 2019.02.15
+
+// MCx341 Serial Port Initialize Data 
+// ( See. arch/arm/plat_omap/include/omap-serial.h , arch/arm/mach-omap2/serial.c )
+#define DEFAULT_AUTOSUSPEND_DELAY	-1
+
+#define DEFAULT_RXDMA_POLLRATE		1	/* RX DMA polling rate (us) */
+#define DEFAULT_RXDMA_BUFSIZE		4096	/* RX DMA buffer size */
+#define DEFAULT_RXDMA_TIMEOUT		(3 * HZ)/* RX DMA timeout (jiffies) */
+
+
+// gpios = { CTS, DSR, DCD , RI  , RTS , DTR }
+static struct omap_uart_port_info mc341_uart_info[OMAP_MAX_HSUART_PORTS] __initdata = {
+	// UART 0
+	{
+		.dma_enabled	= false,
+		.dma_rx_buf_size = DEFAULT_RXDMA_BUFSIZE,
+		.dma_rx_poll_rate = DEFAULT_RXDMA_POLLRATE,
+		.dma_rx_timeout = DEFAULT_RXDMA_TIMEOUT,
+		.autosuspend_timeout = DEFAULT_AUTOSUSPEND_DELAY,
+		.gpios = { ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS },
+	},
+	// UART 1	
+	{
+		.dma_enabled	= false,
+		.dma_rx_buf_size = DEFAULT_RXDMA_BUFSIZE,
+		.dma_rx_poll_rate = DEFAULT_RXDMA_POLLRATE,
+		.dma_rx_timeout = DEFAULT_RXDMA_TIMEOUT,
+		.autosuspend_timeout = DEFAULT_AUTOSUSPEND_DELAY,
+		.gpios = { ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS },
+	},
+	// UART 2	
+	{
+		.dma_enabled	= false,
+		.dma_rx_buf_size = DEFAULT_RXDMA_BUFSIZE,
+		.dma_rx_poll_rate = DEFAULT_RXDMA_POLLRATE,
+		.dma_rx_timeout = DEFAULT_RXDMA_TIMEOUT,
+		.autosuspend_timeout = DEFAULT_AUTOSUSPEND_DELAY,
+		.gpios = { ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS },
+	},
+	// UART 3	
+	{
+		.dma_enabled	= false,
+		.dma_rx_buf_size = DEFAULT_RXDMA_BUFSIZE,
+		.dma_rx_poll_rate = DEFAULT_RXDMA_POLLRATE,
+		.dma_rx_timeout = DEFAULT_RXDMA_TIMEOUT,
+		.autosuspend_timeout = DEFAULT_AUTOSUSPEND_DELAY,
+		.gpios = { ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS },		
+	},
+	// UART 4	
+	{
+		.dma_enabled	= false,
+		.dma_rx_buf_size = DEFAULT_RXDMA_BUFSIZE,
+		.dma_rx_poll_rate = DEFAULT_RXDMA_POLLRATE,
+		.dma_rx_timeout = DEFAULT_RXDMA_TIMEOUT,
+		.autosuspend_timeout = DEFAULT_AUTOSUSPEND_DELAY,
+		.gpios = { ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS },		
+	},
+	// UART 5	
+	{
+		.dma_enabled	= false,
+		.dma_rx_buf_size = DEFAULT_RXDMA_BUFSIZE,
+		.dma_rx_poll_rate = DEFAULT_RXDMA_POLLRATE,
+		.dma_rx_timeout = DEFAULT_RXDMA_TIMEOUT,
+		.autosuspend_timeout = DEFAULT_AUTOSUSPEND_DELAY,
+#if defined(CONFIG_MACH_MC341B10)
+		// gpios = { --- , DSR, DCD, RI , --- , DTR }
+		.gpios = { ARCH_NR_GPIOS, GPIO_TO_PIN(1, 14), GPIO_TO_PIN(1, 13), GPIO_TO_PIN(1, 15), ARCH_NR_GPIOS, GPIO_TO_PIN(1, 12) },
+#else
+		.gpios = { ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS },
+#endif
+	},					
+};
+
+// CONPROSYS serial uart pin's map
 static struct pinmux_config mcs341_uart1_wl12xx_pin_mux[] = {
 	{"uart1_rxd.uart1_rxd", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},		/* UART1_RXD RS485 */
 	{"uart1_txd.uart1_txd", OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},			/* UART1_TXD RS485 */
@@ -858,6 +946,70 @@ static struct pinmux_config mc341_uart1_wl12xx_pin_mux[] = {
 //	{"nmin.nmin", OMAP_MUX_MODE0 },	/* NMI in */
 	{NULL, 0},
 };
+
+// update 2015.02.04 UART3, SPI1 init
+static struct pinmux_config uart3_pin_mux[] = {
+	{"mii1_rxd3.uart3_rxd", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLUP},/* UART3_RXD 3G-CN */
+	{"mii1_rxd2.uart3_txd", OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},	/* UART3_TXD 3G-CN */
+// update 2015.02.05 uart3 update
+//	{"uart1_rtsn.uart1_rtsn", OMAP_MUX_MODE6 | AM33XX_PIN_INPUT_PULLUP},/* UART3_RTSn 3G-CN */
+//	{"uart1_ctsn.uart1_ctsn", OMAP_MUX_MODE6 | AM33XX_PIN_OUTPUT},	/* UART3_CTSn 3G-CN */
+	{"lcd_data11.uart3_rtsn", OMAP_MUX_MODE6 | AM33XX_PIN_OUTPUT},/* UART3_RTSn 3G-CN */
+	{"lcd_data10.uart3_ctsn", OMAP_MUX_MODE6 | AM33XX_PIN_INPUT_PULLUP},	/* UART3_CTSn 3G-CN */
+	{NULL, 0},
+};
+
+// update 2016.04.11 (1) UART3 EC Series
+static struct pinmux_config ec341_uart3_pin_mux[] = {
+	{"mii1_rxd3.uart3_rxd", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLUP},/* UART3_RXD 3G-CN */
+	{"mii1_rxd2.uart3_txd", OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},	/* UART3_TXD 3G-CN */
+	{"mdio_clk.uart3_rtsn", OMAP_MUX_MODE3 | AM33XX_PIN_OUTPUT},/* UART3_RTSn 3G-CN */
+	{"mdio_data.uart3_ctsn", OMAP_MUX_MODE3 | AM33XX_PIN_INPUT_PULLUP},	/* UART3_CTSn 3G-CN */
+	{NULL, 0},
+};
+
+// update 2015.02.26 uart5 update
+// update 2015.05.10 change from "uart5_***" to "lcddata**.uart5_***".
+static struct pinmux_config uart5_pin_mux[] = {
+	{"lcd_data9.uart5_rxd", OMAP_MUX_MODE4 | AM33XX_PIN_INPUT_PULLUP},/* UART5_RXD */
+	{"lcd_data8.uart5_txd", OMAP_MUX_MODE4 | AM33XX_PIN_OUTPUT},	/* UART5_TXDN */
+//	{"lcd_data15.uart5_rtsn", OMAP_MUX_MODE6 | AM33XX_PIN_INPUT_PULLUP},/* UART5_RTSn */
+//	{"lcd_data14.uart5_ctsn", OMAP_MUX_MODE6 | AM33XX_PIN_OUTPUT},	/* UART5_CTSn */
+	{"lcd_data15.uart5_rtsn", OMAP_MUX_MODE6 | AM33XX_PIN_OUTPUT},/* UART5_RTSn */
+	{"lcd_data14.uart5_ctsn", OMAP_MUX_MODE6 | AM33XX_PIN_INPUT_PULLUP},	/* UART5_CTSn */
+	{NULL, 0},
+};
+
+//update 2016.09.29 (1)
+static struct pinmux_config uart5_rs232c_pin_mux[] = {
+	{"gpmc_ad12.gpio1_12",OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},
+	{"gpmc_ad13.gpio1_13",OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},// update 2019.02.15 AM33XX_PIN_INPUT_PULLUP to AM33XX_PIN_INPUT
+	{"gpmc_ad14.gpio1_14",OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},// update 2019.02.15 AM33XX_PIN_INPUT_PULLUP to AM33XX_PIN_INPUT
+	{"gpmc_ad15.gpio1_15",OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},// update 2019.02.15 AM33XX_PIN_INPUT_PULLUP to AM33XX_PIN_INPUT	
+};
+
+//update 2015.07.22 uart5 rs422/rs485 type update
+// update 2015.05.10 change from "uart5_***" to "lcddata**.uart5_***".
+static struct pinmux_config uart5_rs485_pin_mux[] = {
+	{"lcd_data9.uart5_rxd", OMAP_MUX_MODE4 | AM33XX_PIN_INPUT_PULLUP},/* UART5_RXD */
+	{"lcd_data8.uart5_txd", OMAP_MUX_MODE4 | AM33XX_PIN_OUTPUT},	/* UART5_TXDN */
+	{"lcd_data15.uart5_rtsn", OMAP_MUX_MODE6 | AM33XX_PIN_OUTPUT},/* UART5_RTSn */
+	{"lcd_data14.uart5_ctsn", OMAP_MUX_MODE6 | AM33XX_PIN_INPUT_PULLUP},	/* UART5_CTSn */ 
+	{"gpmc_ad7.gpio1_7", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP}, /* UART5 full/half mode */
+	{NULL, 0},
+};
+
+// update 2016.04.11 (1) UART5 EC Series
+static struct pinmux_config ec341_uart5_pin_mux[] = {
+	{"mii1_col.uart5_rxd", OMAP_MUX_MODE3 | AM33XX_PIN_INPUT_PULLUP},/* UART5_RXD */
+	{"rmii1_refclk.uart5_txd", OMAP_MUX_MODE3 | AM33XX_PIN_OUTPUT},	/* UART5_TXD */
+	{"mii1_rxerr.uart5_rtsn", OMAP_MUX_MODE5 | AM33XX_PIN_OUTPUT},/* UART5_RTSn */
+	{"mii1_crs.uart5_ctsn", OMAP_MUX_MODE5 | AM33XX_PIN_INPUT_PULLUP},	/* UART5_CTSn */ 
+	{NULL, 0},
+};
+
+/* End of UART's structure */
+
 //update 2015.07.03
 static struct pinmux_config mc341_dcan_pin_mux[] = {
 //	{"uart1_rxd.d_can1_tx", OMAP_MUX_MODE2 | AM33XX_PULL_ENBL},
@@ -967,7 +1119,7 @@ static struct mtd_partition am335x_spi_partitions[] = {
 	},
 	{
 		.name       = "APL Area",
-		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0xDD0000 */
+		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0xDC0000 */
 		.size       = MTDPART_SIZ_FULL,		/* size ~= 20 MiB */
 	}
 };
@@ -996,19 +1148,52 @@ static struct mtd_partition am335x_spi_partitions_512mb[] = {
 	},
 	{
 		.name       = "Root File System",
-		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0x442000 */
+		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0x440000 */
 		.size       = 76 * SZ_128K,		/* size ~= 10 MiB */
 	},
 	{
 		.name       = "APL Area 1",
-		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0xDD0000 */
+		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0xDC0000 */
 		.size       = 146 * SZ_128K,			/* size = 20 MiB */
 	},
+#ifdef CONFIG_MACH_MC34X_ENABLE_DUPLICATE_BACKUP
+	{
+		.name       = "Config Area",
+		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0x2000000 */
+		.size       = SZ_128K,
+	},
+	{
+		.name       = "Backup U-Boot",
+		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0x2020000 */
+		.size       = 4 * SZ_128K,
+	},
+	{
+		.name       = "Backup U-Boot Env",
+		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0x20A0000 */
+		.size       = 2 * SZ_128K,
+	},
+	{
+		.name       = "Backup Kernel",
+		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0x20E0000 */
+		.size       = 27 * SZ_128K,
+	},
+	{
+		.name       = "Backup Root File System",
+		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0x2440000 */
+		.size       = 76 * SZ_128K,		/* size ~= 10 MiB */
+	},
+	{
+		.name       = "Backup APL Area 1",
+		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0x2DC0000 */
+		.size       = MTDPART_SIZ_FULL,			/* size = 20 MiB */
+	}
+#else
 	{
 		.name       = "APL Area 2",
 		.offset     = MTDPART_OFS_APPEND,
 		.size       = MTDPART_SIZ_FULL,		/* size ~= 32 MiB */
 	}
+#endif
 };
 /*
 static const struct flash_platform_data mc341_spi_flash = {
@@ -1561,66 +1746,6 @@ static struct pinmux_config spi1_pin_mux[] = {
 	{"mcasp0_ahclkr.spi1_cs0", OMAP_MUX_MODE3 | AM33XX_PIN_INPUT_PULLUP},	/* SPI1_CS0 ROM[CS] */
 	{NULL, 0},
 };
-// update 2015.02.04 UART3, SPI1 init
-static struct pinmux_config uart3_pin_mux[] = {
-	{"mii1_rxd3.uart3_rxd", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLUP},/* UART3_RXD 3G-CN */
-	{"mii1_rxd2.uart3_txd", OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},	/* UART3_TXD 3G-CN */
-// update 2015.02.05 uart3 update
-//	{"uart1_rtsn.uart1_rtsn", OMAP_MUX_MODE6 | AM33XX_PIN_INPUT_PULLUP},/* UART3_RTSn 3G-CN */
-//	{"uart1_ctsn.uart1_ctsn", OMAP_MUX_MODE6 | AM33XX_PIN_OUTPUT},	/* UART3_CTSn 3G-CN */
-	{"lcd_data11.uart3_rtsn", OMAP_MUX_MODE6 | AM33XX_PIN_OUTPUT},/* UART3_RTSn 3G-CN */
-	{"lcd_data10.uart3_ctsn", OMAP_MUX_MODE6 | AM33XX_PIN_INPUT_PULLUP},	/* UART3_CTSn 3G-CN */
-	{NULL, 0},
-};
-
-// update 2016.04.11 (1) UART3 EC Series
-static struct pinmux_config ec341_uart3_pin_mux[] = {
-	{"mii1_rxd3.uart3_rxd", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLUP},/* UART3_RXD 3G-CN */
-	{"mii1_rxd2.uart3_txd", OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},	/* UART3_TXD 3G-CN */
-	{"mdio_clk.uart3_rtsn", OMAP_MUX_MODE3 | AM33XX_PIN_OUTPUT},/* UART3_RTSn 3G-CN */
-	{"mdio_data.uart3_ctsn", OMAP_MUX_MODE3 | AM33XX_PIN_INPUT_PULLUP},	/* UART3_CTSn 3G-CN */
-	{NULL, 0},
-};
-
-// update 2015.02.26 uart5 update
-// update 2015.05.10 change from "uart5_***" to "lcddata**.uart5_***".
-static struct pinmux_config uart5_pin_mux[] = {
-	{"lcd_data9.uart5_rxd", OMAP_MUX_MODE4 | AM33XX_PIN_INPUT_PULLUP},/* UART5_RXD */
-	{"lcd_data8.uart5_txd", OMAP_MUX_MODE4 | AM33XX_PIN_OUTPUT},	/* UART5_TXDN */
-//	{"lcd_data15.uart5_rtsn", OMAP_MUX_MODE6 | AM33XX_PIN_INPUT_PULLUP},/* UART5_RTSn */
-//	{"lcd_data14.uart5_ctsn", OMAP_MUX_MODE6 | AM33XX_PIN_OUTPUT},	/* UART5_CTSn */
-	{"lcd_data15.uart5_rtsn", OMAP_MUX_MODE6 | AM33XX_PIN_OUTPUT},/* UART5_RTSn */
-	{"lcd_data14.uart5_ctsn", OMAP_MUX_MODE6 | AM33XX_PIN_INPUT_PULLUP},	/* UART5_CTSn */
-	{NULL, 0},
-};
-
-//update 2016.09.29 (1)
-static struct pinmux_config uart5_rs232c_pin_mux[] = {
-	{"gpmc_ad12.gpio1_12",OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},
-	{"gpmc_ad13.gpio1_13",OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
-	{"gpmc_ad14.gpio1_14",OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
-	{"gpmc_ad15.gpio1_15",OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
-};
-
-//update 2015.07.22 uart5 rs422/rs485 type update
-// update 2015.05.10 change from "uart5_***" to "lcddata**.uart5_***".
-static struct pinmux_config uart5_rs485_pin_mux[] = {
-	{"lcd_data9.uart5_rxd", OMAP_MUX_MODE4 | AM33XX_PIN_INPUT_PULLUP},/* UART5_RXD */
-	{"lcd_data8.uart5_txd", OMAP_MUX_MODE4 | AM33XX_PIN_OUTPUT},	/* UART5_TXDN */
-	{"lcd_data15.uart5_rtsn", OMAP_MUX_MODE6 | AM33XX_PIN_OUTPUT},/* UART5_RTSn */
-	{"lcd_data14.uart5_ctsn", OMAP_MUX_MODE6 | AM33XX_PIN_INPUT_PULLUP},	/* UART5_CTSn */ 
-	{"gpmc_ad7.gpio1_7", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP}, /* UART5 full/half mode */
-	{NULL, 0},
-};
-
-// update 2016.04.11 (1) UART5 EC Series
-static struct pinmux_config ec341_uart5_pin_mux[] = {
-	{"mii1_col.uart5_rxd", OMAP_MUX_MODE3 | AM33XX_PIN_INPUT_PULLUP},/* UART5_RXD */
-	{"rmii1_refclk.uart5_txd", OMAP_MUX_MODE3 | AM33XX_PIN_OUTPUT},	/* UART5_TXD */
-	{"mii1_rxerr.uart5_rtsn", OMAP_MUX_MODE5 | AM33XX_PIN_OUTPUT},/* UART5_RTSn */
-	{"mii1_crs.uart5_ctsn", OMAP_MUX_MODE5 | AM33XX_PIN_INPUT_PULLUP},	/* UART5_CTSn */ 
-	{NULL, 0},
-};
 
 // add 2015.07.21
 #ifdef CONFIG_MACH_MC34X_ENABLE_NMI_INTERRUPT
@@ -1809,14 +1934,15 @@ static void setup_starterkit(void)
 		setup_pin_mux(uart5_rs232c_pin_mux); // GPIO ( DCD, RI, DTR, DSR )
 		//update 2016.12.16 GPIO DTR sets high.
 
-		#define GPIO_UART5_DTR_PIN GPIO_TO_PIN(1, 12)
-		ret = gpio_request(GPIO_UART5_DTR_PIN, "GPIO_UART5_DTR_PIN");
-		if (!ret) {
-			gpio_direction_output(GPIO_UART5_DTR_PIN, 1);
-		}else{
-			printk(KERN_ERR "%s: failed to request GPIO for GPIO_UART5_DTR_PIN port "
-           "gpio control: %d\n", __func__, ret);
-		}
+		// update 2019.02.15 without comment
+		// #define GPIO_UART5_DTR_PIN GPIO_TO_PIN(1, 12)
+		// ret = gpio_request(GPIO_UART5_DTR_PIN, "GPIO_UART5_DTR_PIN");
+		// if (!ret) {
+		// 	gpio_direction_output(GPIO_UART5_DTR_PIN, 1);
+		// }else{
+		// 	printk(KERN_ERR "%s: failed to request GPIO for GPIO_UART5_DTR_PIN port "
+        //    "gpio control: %d\n", __func__, ret);
+		// }
 	#endif
 #endif
 #endif // !defined(CONFIG_MACH_MC341B00)
@@ -1846,14 +1972,14 @@ static void setup_starterkit(void)
 		setup_pin_mux(mc341_lan2_model);
 #endif
 		// 2015.02.09
-			#define GPIO_INIT_END GPIO_TO_PIN(0, 16)
-			ret = gpio_request(GPIO_INIT_END, "GPIO_INIT_END");
-			if (!ret) {
-				gpio_direction_output(GPIO_INIT_END, 1);
-			}else{
-				printk(KERN_ERR "%s: failed to request GPIO for GPIO_INIT_END port "
-                       "gpio control: %d\n", __func__, ret);
-			}
+		#define GPIO_INIT_END GPIO_TO_PIN(0, 16)
+		ret = gpio_request(GPIO_INIT_END, "GPIO_INIT_END");
+		if (!ret) {
+			gpio_direction_output(GPIO_INIT_END, 1);
+		}else{
+			printk(KERN_ERR "%s: failed to request GPIO for GPIO_INIT_END port "
+                    "gpio control: %d\n", __func__, ret);
+		}
 	}
 #endif //CONFIG_MACH_MC341B00
 
@@ -2559,8 +2685,11 @@ static void __init mc341_init(void)
 	am33xx_cpuidle_init();
 // printk(KERN_WARNING "[%s](%d)am33xx_mux_init in!!!",__FILE__,__LINE__); // 12.23
 	am33xx_mux_init(board_mux);
-// printk(KERN_WARNING "[%s](%d)omap_serial_init in!!!",__FILE__,__LINE__); // 12.23
-	omap_serial_init();
+//	printk(KERN_WARNING "[%s](%d)omap_serial_init in!!!",__FILE__,__LINE__); // 12.23
+// update 2019.02.15 Change omap_serial_init to omap_serial_board_init.
+//	omap_serial_init();
+	omap_serial_board_init(mc341_uart_info);
+
 // printk(KERN_WARNING "[%s](%d)mc341_rtc_init in!!!",__FILE__,__LINE__); // 12.23
 // 2015.03.06 RTC update
 #ifdef CONFIG_MACH_MC341_ENABLE_RTC_CLOCK //update 2015.07.03 (See. KConfig)
@@ -2628,6 +2757,7 @@ static void __init mc341_map_io(void)
 void mc341_restart(char mode, const char *cmd)
 {
 	int ret;
+	char *label;
 
 #if defined(CONFIG_MACH_MC341B00)
 	#define GPIO_RESET_POUT GPIO_TO_PIN( 3, 18 )	//GPIO 114
@@ -2635,15 +2765,20 @@ void mc341_restart(char mode, const char *cmd)
 	#define GPIO_RESET_POUT GPIO_TO_PIN( 3, 9 )		//GPIO 105
 #endif
 
-	
-	gpio_free(GPIO_RESET_POUT);
-	ret = gpio_request(GPIO_RESET_POUT, "GPIO_RESET_POUT");
-	if (!ret) {
-		gpio_direction_output(GPIO_RESET_POUT, 1);
-	}else{
-		pr_err("%s: failed to request GPIO for GPIO_RESET_POUT port "
+	//gpio_free(GPIO_RESET_POUT);
+	label = gpio_is_requested( GPIO_RESET_POUT );
+
+	if( !label ){ // Not Gpio Request
+		ret = gpio_request(GPIO_RESET_POUT, "GPIO_RESET_POUT");
+		if( ret ){ // gpio_request failed.
+			pr_err("%s: failed to request GPIO for GPIO_RESET_POUT port "
 					"gpio control: %d\n", __func__, ret);
+			return;			
+		}
 	}
+	
+	gpio_direction_output( GPIO_RESET_POUT, 1 );
+
 }
 
 // CPS-MC341-ADSCn

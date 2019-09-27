@@ -26,6 +26,7 @@
 #include <linux/slab.h>
 #include <linux/pm_runtime.h>
 #include <linux/console.h>
+#include <linux/gpio.h>		// update 2019.02.15
 
 #include <plat/omap-serial.h>
 #include "common.h"
@@ -78,6 +79,7 @@ static struct omap_uart_port_info omap_serial_default_info[] __initdata = {
 		.dma_rx_poll_rate = DEFAULT_RXDMA_POLLRATE,
 		.dma_rx_timeout = DEFAULT_RXDMA_TIMEOUT,
 		.autosuspend_timeout = DEFAULT_AUTOSUSPEND_DELAY,
+		.gpios = { ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS, ARCH_NR_GPIOS }, // update 2019.02.15 
 	},
 };
 
@@ -328,6 +330,7 @@ void __init omap_serial_init_port(struct omap_board_data *bdata,
 	u32 pdata_size = 0;
 	char *name;
 	struct omap_uart_port_info omap_up;
+	int i = 0;	//update 2019.02.15
 
 	if (WARN_ON(!bdata))
 		return;
@@ -356,6 +359,11 @@ void __init omap_serial_init_port(struct omap_board_data *bdata,
 	omap_up.dma_rx_timeout = info->dma_rx_timeout;
 	omap_up.dma_rx_poll_rate = info->dma_rx_poll_rate;
 	omap_up.autosuspend_timeout = info->autosuspend_timeout;
+
+	// update 2019.02.15
+	for( i = 0; i < OMAP_UART_MCTRL_GPIO_MAX; i ++ ){
+		omap_up.gpios[ i ] = info->gpios[ i ];
+	}
 
 	/* Enable the MDR1 Errata i202 for OMAP2430/3xxx/44xx */
 	if (!cpu_is_omap2420() && !cpu_is_ti816x())

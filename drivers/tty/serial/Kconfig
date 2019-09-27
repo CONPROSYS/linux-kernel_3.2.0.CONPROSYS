@@ -1326,6 +1326,7 @@ config SERIAL_OMAP
 	tristate "OMAP serial port support"
 	depends on ARCH_OMAP2 || ARCH_OMAP3 || ARCH_OMAP4
 	select SERIAL_CORE
+	select SERIAL_MCTRL_GPIO if GPIOLIB
 	help
 	  If you have a machine based on an Texas Instruments OMAP CPU you
 	  can enable its onboard serial ports by enabling this option.
@@ -1611,3 +1612,6 @@ config SERIAL_XILINX_PS_UART_CONSOLE
 	  Enable a Xilinx PS UART port to be the system console.
 
 endmenu
+
+config SERIAL_MCTRL_GPIO
+	tristate

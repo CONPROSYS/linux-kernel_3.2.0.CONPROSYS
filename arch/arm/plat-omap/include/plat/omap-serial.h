@@ -61,6 +61,8 @@
 #define UART_ERRATA_i202_MDR1_ACCESS	BIT(0)
 #define UART_ERRATA_i291_DMA_FORCEIDLE	BIT(1)
 
+#define OMAP_UART_MCTRL_GPIO_MAX 6 //update 2019.02.15
+
 struct omap_uart_port_info {
 	bool			dma_enabled;	/* To specify DMA Mode */
 	unsigned int		uartclk;	/* UART clock rate */
@@ -70,6 +72,8 @@ struct omap_uart_port_info {
 	unsigned int		dma_rx_timeout;
 	unsigned int		autosuspend_timeout;
 	unsigned int		dma_rx_poll_rate;
+
+	unsigned gpios[OMAP_UART_MCTRL_GPIO_MAX];	//update 2019.02.15
 
 	int (*get_context_loss_count)(struct device *);
 	void (*set_forceidle)(struct platform_device *);
@@ -117,6 +121,8 @@ struct uart_omap_port {
 	unsigned char		dlh;
 	unsigned char		mdr1;
 	unsigned char		scr;
+
+	unsigned gpios[OMAP_UART_MCTRL_GPIO_MAX];	//update 2019.02.15
 
 	int			use_dma;
 	/*
