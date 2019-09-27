@@ -1491,7 +1491,7 @@ serial_omap_ioctl(struct uart_port *port, unsigned int cmd, unsigned long arg)
 		//  		up->pdev->id, arg );
 
 		// update 2018.06.09 : Change uart port less than 6.
-		if( up->pdev->id < OMAP_MAX_HSUART_PORTS )
+		if( up->pdev->id < OMAP_MAX_HSUART_PORTS ){
 			unsigned int		new_mctrl;
 			struct serial_rs485	*rs485_config = &uart_omap_rs485_config[up->pdev->id];
 
