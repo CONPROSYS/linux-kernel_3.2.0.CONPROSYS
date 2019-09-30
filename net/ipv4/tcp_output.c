@@ -1173,9 +1173,8 @@ int tcp_mtu_to_mss(const struct sock *sk, int pmtu)
 	mss_now -= icsk->icsk_ext_hdr_len;
 
 	/* Then reserve room for full set of TCP options and 8 bytes of data */
-	//CVE-2019-11477
-	if (mss_now < TCP_MIN_SND_MSS)
-		mss_now = TCP_MIN_SND_MSS;
+	//CVE-2019-11477, CVE-2019-11479
+	mss_now = max(mss_now, sock_net(sk)->ipv4.sysctl_tcp_min_snd_mss);
 	//if (mss_now < 48)
 	//	mss_now = 48;
 

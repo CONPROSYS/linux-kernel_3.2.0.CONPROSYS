@@ -2636,16 +2636,27 @@ struct proto tcp_prot = {
 };
 EXPORT_SYMBOL(tcp_prot);
 
-
-static int __net_init tcp_sk_init(struct net *net)
-{
-	return inet_ctl_sock_create(&net->ipv4.tcp_sock,
-				    PF_INET, SOCK_RAW, IPPROTO_TCP, net);
-}
-
 static void __net_exit tcp_sk_exit(struct net *net)
 {
 	inet_ctl_sock_destroy(net->ipv4.tcp_sock);
+}
+
+static int __net_init tcp_sk_init(struct net *net)
+{
+	int res;
+
+	res = inet_ctl_sock_create(&net->ipv4.tcp_sock,
+				    PF_INET, SOCK_RAW, IPPROTO_TCP, net);
+
+	if( res )
+		goto fail;
+
+	net->ipv4.sysctl_tcp_min_snd_mss = TCP_MIN_SND_MSS;
+	return 0;
+
+fail:
+	tcp_sk_exit(net);
+	return res;
 }
 
 static void __net_exit tcp_sk_exit_batch(struct list_head *net_exit_list)

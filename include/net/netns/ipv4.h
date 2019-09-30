@@ -51,6 +51,9 @@ struct netns_ipv4 {
 	int sysctl_icmp_ratelimit;
 	int sysctl_icmp_ratemask;
 	int sysctl_icmp_errors_use_inbound_ifaddr;
+
+	int sysctl_tcp_min_snd_mss; // CVE-2019-11479
+
 	int sysctl_rt_cache_rebuild_count;
 	int current_rt_cache_rebuild_count;
 
