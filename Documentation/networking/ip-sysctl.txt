@@ -310,6 +310,14 @@ tcp_mem - vector of 3 INTEGERs: min, pressure, max
 	Defaults are calculated at boot time from amount of available
 	memory.
 
+tcp_min_snd_mss - INTEGER
+	TCP SYN and SYNACK messages usually advertise an ADVMSS option,
+	as described in RFC 1122 and RFC 6691.
+	If this ADVMSS option is smaller than tcp_min_snd_mss,
+	it is silently capped to tcp_min_snd_mss.
+
+	Default : 48 (at least 8 bytes of payload per segment)
+
 tcp_moderate_rcvbuf - BOOLEAN
 	If set, TCP performs receive buffer auto-tuning, attempting to
 	automatically size the buffer (no greater than tcp_rmem[2]) to
