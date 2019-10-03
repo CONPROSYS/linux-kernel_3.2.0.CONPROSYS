@@ -289,7 +289,14 @@ static long omap_wdt_ioctl(struct file *file, unsigned int cmd,
 	wdev = file->private_data;
 
 	switch (cmd) {
-	case WDIOC_GETSUPPORT:
+	// Add disable WDT function 
+	case WDIOC_DISABLE:
+		pm_runtime_get_sync(wdev->dev);
+		omap_wdt_disable(wdev);
+		pm_runtime_put_sync(wdev->dev);
+		return 0;
+
+		case WDIOC_GETSUPPORT:
 		return copy_to_user((struct watchdog_info __user *)arg, &ident,
 				sizeof(ident));
 	case WDIOC_GETSTATUS:
