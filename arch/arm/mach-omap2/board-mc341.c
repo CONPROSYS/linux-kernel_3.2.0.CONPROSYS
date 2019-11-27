@@ -89,6 +89,7 @@
 // update 2019.09.05 Ver.2.3.5 (1) Bugfix warning wd_timer2 : _omap4_disable_module message.	
 //                                   (Tree : _omap4_disable_module > _omap4_wait_target_disable > omap4_cminst_wait_module_idle )
 // update 2019.09.20 Ver.2.3.6 (1) Bugfix mc341_reset function.	
+// update 2019.11.26                  (1) Bugfix driver/net/wireless/rtl8812au/include/ieee80211.h
 //#define MC341LAN2 (1)
 #define MC341
 #ifndef MC341
@@ -96,8 +97,8 @@
 */
 #endif
 
-// update 2019.09.20
-#define CPS_KERNEL_VERSION "Ver.2.3.6 (build: 2019.09.20) "
+// update 2019.11.26
+#define CPS_KERNEL_VERSION "Ver.2.4.0 (build: 2019.11.26) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>
