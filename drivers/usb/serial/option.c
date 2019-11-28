@@ -2134,12 +2134,30 @@ static int option_probe(struct usb_serial *serial,
 		serial->interface->cur_altsetting->desc.bInterfaceClass != USB_CLASS_CDC_DATA)
 		return -ENODEV;
 
+#if 1 //Added by Quectel
+	//Quectel UC20's interface 4 can be used as USB network device
+	if (serial->dev->descriptor.idVendor == cpu_to_le16(0x05C6) &&	
+		serial->dev->descriptor.idProduct == cpu_to_le16(0x9003) &&
+		serial->interface->cur_altsetting->desc.bInterfaceNumber >= 4)
+		return -ENODEV;
+	//Quectel EC20's interface 4 can be used as USB network device
+	if (serial->dev->descriptor.idVendor == cpu_to_le16(0x05C6) &&
+		serial->dev->descriptor.idProduct == cpu_to_le16(0x9215) &&
+		serial->interface->cur_altsetting->desc.bInterfaceNumber >= 4)
+		return -ENODEV;
+	//Quectel EC25&EC21&EG91&EG95&EG06&EP06&EM06&BG96/AG35's interface 4 can be used as USB network device
+	if (serial->dev->descriptor.idVendor == cpu_to_le16(0x2C7C) &&
+		serial->interface->cur_altsetting->desc.bInterfaceNumber >= 4)
+		return -ENODEV;
+#endif
+
 	data = serial->private = kzalloc(sizeof(struct usb_wwan_intf_private), GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
 	data->send_setup = option_send_setup;
 	spin_lock_init(&data->susp_lock);
 	data->private = (void *)id->driver_info;
+
 	return 0;
 }
 
