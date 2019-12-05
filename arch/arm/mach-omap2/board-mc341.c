@@ -83,6 +83,8 @@
 //                             (2) Add products COM-1P(USB)H, COM-1PD(USB)H and U-WAVE-R.
 // update 2019.02.15 Ver.2.3.0 (1) Support DSR/DTR/RI/CD of GPIO.( CPS-MC341-ADSCX )
 // update 2019.03.11 Ver.2.3.1 (1) Add CONFIG_MACH_MC34X_ENABLE_DUPLICATE_BACKUP.		
+// update 2019.12.04 Ver.2.3.1.1 (1) Merged Ver.2.3.0.3 (Watchdog Timer bugfixed only)
+
 //#define MC341LAN2 (1)
 #define MC341
 #ifndef MC341
@@ -90,8 +92,8 @@
 */
 #endif
 
-// update 2019.03.11
-#define CPS_KERNEL_VERSION "Ver.2.3.1 (build: 2019.03.11) "
+// update 2019.12.04
+#define CPS_KERNEL_VERSION "Ver.2.3.1.1 (build: 2019.12.04) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -2749,6 +2751,7 @@ static void __init mc341_map_io(void)
 void mc341_restart(char mode, const char *cmd)
 {
 	int ret;
+	char *label;
 
 #if defined(CONFIG_MACH_MC341B00)
 	#define GPIO_RESET_POUT GPIO_TO_PIN( 3, 18 )	//GPIO 114
@@ -2756,15 +2759,20 @@ void mc341_restart(char mode, const char *cmd)
 	#define GPIO_RESET_POUT GPIO_TO_PIN( 3, 9 )		//GPIO 105
 #endif
 
-	
-	gpio_free(GPIO_RESET_POUT);
-	ret = gpio_request(GPIO_RESET_POUT, "GPIO_RESET_POUT");
-	if (!ret) {
-		gpio_direction_output(GPIO_RESET_POUT, 1);
-	}else{
-		pr_err("%s: failed to request GPIO for GPIO_RESET_POUT port "
+	//gpio_free(GPIO_RESET_POUT);
+	label = gpio_is_requested( GPIO_RESET_POUT );
+
+	if( !label ){ // Not Gpio Request
+		ret = gpio_request(GPIO_RESET_POUT, "GPIO_RESET_POUT");
+		if( ret ){ // gpio_request failed.
+			pr_err("%s: failed to request GPIO for GPIO_RESET_POUT port "
 					"gpio control: %d\n", __func__, ret);
+			return;			
+		}
 	}
+	
+	gpio_direction_output( GPIO_RESET_POUT, 1 );
+
 }
 
 // CPS-MC341-ADSCn

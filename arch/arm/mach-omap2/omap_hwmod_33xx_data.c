@@ -39,6 +39,8 @@
 #include "prm33xx.h"
 #include "common.h"
 
+#include "wd_timer.h"
+
 /* Backward references (IPs with Bus Master capability) */
 static struct omap_hwmod am33xx_mpu_hwmod;
 static struct omap_hwmod am33xx_l3_main_hwmod;
@@ -3266,11 +3268,6 @@ static int mc341_watchdog_reset(struct omap_hwmod *oh)
 	return 0;
 }
 
-static int mc341_watchdog_pre_shutdown(struct omap_hwmod *oh)
-{
-	return 0;
-}
-
 static struct omap_hwmod_class_sysconfig wdt_sysc = {
 	.rev_offs	= 0x0,
 	.sysc_offs	= 0x10,
@@ -3292,7 +3289,7 @@ static struct omap_hwmod_class am33xx_wd_timer_hwmod_class = {
 	.name		= "wd_timer",
 	.sysc		= &wdt_sysc,
 	.reset	= mc341_watchdog_reset,
-	.pre_shutdown	= mc341_watchdog_pre_shutdown,
+	.pre_shutdown	= &omap2_wd_timer_disable,
 };
 
 static struct omap_hwmod_addr_space am33xx_wd_timer1_addrs[] = {
@@ -3329,7 +3326,8 @@ static struct omap_hwmod am33xx_wd_timer1_hwmod = {
 	.prcm		= {
 		.omap4	= {
 			.clkctrl_offs	= AM33XX_CM_WKUP_WDT1_CLKCTRL_OFFSET,
-			.modulemode	= MODULEMODE_SWCTRL,
+//			.modulemode	= MODULEMODE_SWCTRL,
+			.modulemode	= 0, // NO_CONTROL 
 		},
 	},
 	.slaves		= am33xx_wd_timer1_slaves,
