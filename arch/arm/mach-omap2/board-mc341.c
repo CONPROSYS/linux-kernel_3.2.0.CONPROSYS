@@ -1,7 +1,7 @@
 /*
  * Code for CONPROSYS Series.by the CONTEC.
  *
- * Copyright (C) 2015-2018 CONTEC.Co.,Ltd. - http://www.contec.com/jp
+ * Copyright (C) 2015-2019 CONTEC.Co.,Ltd. - http://www.contec.com/jp
  * Based by board-am34xevm.c. 
  *
  * This program is free software; you can redistribute it and/or
