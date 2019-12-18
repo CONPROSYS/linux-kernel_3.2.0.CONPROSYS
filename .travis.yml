@@ -7,9 +7,9 @@ os :
   - linux 
 
 dist :
-  - trusty
-#  - xenial
-
+#  - trusty
+  - xenial
+# - bionic
 
 branches :
   except :
@@ -38,10 +38,13 @@ env:
 
 before_install:
   # apt-get install
-  - sudo apt-get install -y gcc-4.7-arm-linux-gnueabi libncurses5-dev binutils-arm-linux-gnueabi u-boot-tools
+  - if [[ $TRAVIS_COMPILER = "arm-linux-gnueabi-gcc-5" ]];then GCC_COMP=gcc-5-arm-linux-gnueabi; fi
+  - if [[ $TRAVIS_COMPILER = "arm-linux-gnueabi-gcc-4.7" ]];then GCC_COMP=gcc-4.7-arm-linux-gnueabi; fi
+  - echo  "$GCC_COMP"
+  - sudo apt-get install -y $GCC_COMP libncurses5-dev binutils-arm-linux-gnueabi u-boot-tools
   - export CROSS_COMPILE=arm-linux-gnueabi-
   - export ARCH=arm
-  - sudo ln -s /usr/bin/arm-linux-gnueabi-gcc-4.7 /usr/bin/arm-linux-gnueabi-gcc
+  - sudo ln -s /usr/bin/$TRAVIS_COMPILER /usr/bin/arm-linux-gnueabi-gcc
   - export CPU_COUNT=`cat /proc/cpuinfo | grep -c processor`
   - export JOB_NUMBER=`expr $CPU_COUNT + 1`
 
