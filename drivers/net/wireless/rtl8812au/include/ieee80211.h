@@ -1319,7 +1319,7 @@ enum ieee80211_state {
 (((Addr[5]) & 0xff) == 0xff))
 #else
 
-#if ( __GNUC__ >= 5 )
+#ifdef __GNUC_STDC_INLINE__
 static 
 #else
 extern 
@@ -1329,7 +1329,7 @@ __inline int is_multicast_mac_addr(const u8 *addr)
         return ((addr[0] != 0xff) && (0x01 & addr[0]));
 }
 
-#if ( __GNUC__ >= 5 )
+#ifdef __GNUC_STDC_INLINE__
 static 
 #else
 extern
@@ -1340,7 +1340,7 @@ __inline int is_broadcast_mac_addr(const u8 *addr)
 		(addr[3] == 0xff) && (addr[4] == 0xff) && (addr[5] == 0xff));
 }
 
-#if ( __GNUC__ >= 5 )
+#ifdef __GNUC_STDC_INLINE__
 static 
 #else
 extern
