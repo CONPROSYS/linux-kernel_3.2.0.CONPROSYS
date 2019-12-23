@@ -252,7 +252,9 @@ static int omap_wdt_release(struct inode *inode, struct file *file)
 
 	pm_runtime_put_sync(wdev->dev);
 #else
+#ifndef CONFIG_CONTEC_MC34X
 	printk(KERN_CRIT "omap_wdt: Unexpected close, not stopping!\n");
+#endif
 #endif
 	wdev->omap_wdt_users = 0;
 
