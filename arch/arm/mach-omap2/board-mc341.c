@@ -89,7 +89,15 @@
 // update 2019.09.05 Ver.2.3.5 (1) Bugfix warning wd_timer2 : _omap4_disable_module message.	
 //                                   (Tree : _omap4_disable_module > _omap4_wait_target_disable > omap4_cminst_wait_module_idle )
 // update 2019.09.20 Ver.2.3.6 (1) Bugfix mc341_reset function.	
-// update 2019.11.26                  (1) Bugfix driver/net/wireless/rtl8812au/include/ieee80211.h
+// update 2019.12.25 Ver.2.4.0 (1) Bugfix CVE-2019-21477 to CVE-2019-21479.
+//                             (2) Add Watchdog Enable ioctl and Watchdog Disable ioctl. 
+//                             (3) Merge driver/usb/serial all devices source for kernel v3.2.102.
+//                             (4) Fixed problem that rtlwifi/rtl8192cu prevents reassociation.
+//                             (5) Enable rtl8812au wireless-lan driver. 
+//                             (6) Bugfix driver/net/wireless/rtl8812au/include/ieee80211.h
+//                             (7) Fixed Error "make module" command for gcc5.
+//                             (8) Improved for GDB.
+//                             (9) Modify value of "CONFIG_CFG80211" from "m" to "y" in defconfig for MC341-ADSCX series.
 //#define MC341LAN2 (1)
 #define MC341
 #ifndef MC341
@@ -97,8 +105,8 @@
 */
 #endif
 
-// update 2019.11.26
-#define CPS_KERNEL_VERSION "Ver.2.4.0 (build: 2019.11.26) "
+// update 2019.12.25
+#define CPS_KERNEL_VERSION "Ver.2.4.0 (build: 2019.12.25) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>
