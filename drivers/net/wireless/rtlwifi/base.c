@@ -1226,6 +1226,54 @@ void rtl_watchdog_wq_callback(void *data)
 
 	/* <3> DM */
 	rtlpriv->cfg->ops->dm_watchdog(hw);
+
+	/* <4> roaming */
+	if (mac->link_state == MAC80211_LINKED &&
+	    mac->opmode == NL80211_IFTYPE_STATION) {
+		if ((rtlpriv->link_info.bcn_rx_inperiod +
+		     rtlpriv->link_info.num_rx_inperiod) == 0) {
+			rtlpriv->link_info.roam_times++;
+
+			/* if we can't recv beacon for 6s, we should
+			 * reconnect this AP
+			 */
+			if (rtlpriv->link_info.roam_times >= 3) {
+				rtlpriv->link_info.roam_times = 0;
+				ieee80211_connection_loss(rtlpriv->mac80211.vif);
+			}
+		} else {
+			rtlpriv->link_info.roam_times = 0;
+		}
+	}
+	rtlpriv->link_info.bcn_rx_inperiod = 0;
+}
+
+/* this function is used for roaming */
+void rtl_beacon_statistic(struct ieee80211_hw *hw, struct sk_buff *skb)
+{
+	struct rtl_priv *rtlpriv = rtl_priv(hw);
+	struct ieee80211_hdr *hdr = (struct ieee80211_hdr *)skb->data;
+
+	if (rtlpriv->mac80211.opmode != NL80211_IFTYPE_STATION)
+		return;
+
+	if (rtlpriv->mac80211.link_state < MAC80211_LINKED)
+		return;
+
+	/* check if this really is a beacon */
+	if (!ieee80211_is_beacon(hdr->frame_control) &&
+	    !ieee80211_is_probe_resp(hdr->frame_control))
+		return;
+
+	/* min. beacon length + FCS_LEN */
+	if (skb->len <= 40 + FCS_LEN)
+		return;
+
+	/* and only beacons from the associated BSSID, please */
+	if (compare_ether_addr(hdr->addr3, rtlpriv->mac80211.bssid))
+		return;
+
+	rtlpriv->link_info.bcn_rx_inperiod++;
 }
 
 void rtl_watch_dog_timer_callback(unsigned long data)
