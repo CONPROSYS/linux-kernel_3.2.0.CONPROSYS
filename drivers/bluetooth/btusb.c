@@ -102,6 +102,8 @@ static struct usb_device_id btusb_table[] = {
 
 	/* Broadcom BCM20702A0 */
 	{ USB_DEVICE(0x413c, 0x8197) },
+	{ USB_DEVICE(0x0a5c, 0x21e8) },	// IO data USB-BT40LE
+	{ USB_DEVICE(0x0a5c, 0x21ec) },	// Succul
 
 	{ }	/* Terminating entry */
 };
