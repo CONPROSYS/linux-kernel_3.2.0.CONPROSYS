@@ -57,5 +57,8 @@
 
 
 #define GET_WLDR_VAL_MSEC(msecs)	(0xffffffff - (((msecs) * (32768/(1<<PTV))) / 1000 ) + 1 )
+#define MC341_BEFORE_INTERRUPT_TIME     ( 30 ) // secs
+#define MC341_ADJUST_TIME(secs)     \
+    (  secs > 0 ? ( (secs - 1) / 6  + secs + MC341_BEFORE_INTERRUPT_TIME  ) : MC341_BEFORE_INTERRUPT_TIME )
 
 #endif				/* _AM335X_WATCHDOG_H */

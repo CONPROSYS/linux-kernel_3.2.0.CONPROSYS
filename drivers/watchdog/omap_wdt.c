@@ -126,8 +126,15 @@ static void omap_wdt_adjust_timeout(unsigned new_timeout)
 
 static void omap_wdt_set_timeout(struct omap_wdt_dev *wdev)
 {
-	u32 pre_margin = GET_WLDR_VAL(timer_margin);
+	u32 pre_margin;
 	void __iomem *base = wdev->base;
+
+#ifdef CONFIG_CONTEC_MC34X
+	pr_debug("%s: Adjust Time : %d", __func__, MC341_ADJUST_TIME( timer_margin ) );
+	pre_margin = GET_WLDR_VAL( MC341_ADJUST_TIME( timer_margin ) ); 
+#else
+	pre_margin = GET_WLDR_VAL(timer_margin);
+#endif
 
 	pm_runtime_get_sync(wdev->dev);
 
@@ -158,6 +165,7 @@ static irqreturn_t am335x_wdt_interrupt(int irq, void *dev_id)
 		}
 
 		if( irq_sts & AM335X_WATCHDOG_IRQ_ENABLE_DLY){
+				pr_debug("%s: Watchdog Start", __func__);
 				wdev->restart( 'S', NULL );
 		}
 		__raw_writel(irq_sts, base + AM335X_WATCHDOG_IRQ_STATUS);
@@ -190,6 +198,22 @@ static void am335x_wdt_delay_time(struct omap_wdt_dev *wdev, unsigned long delay
 	__raw_writel(delay_times, base + AM335X_WATCHDOG_DLY);
 }
 
+//update 2020.01.22
+static void am335x_wdt_set_before_interrupt(struct omap_wdt_dev *wdev)
+{
+	if( wdev->irq ){
+		/* 100msec -> 30 sec before delay */
+		am335x_wdt_delay_time(wdev,
+				GET_WLDR_VAL( MC341_BEFORE_INTERRUPT_TIME )//0xFFFFFFD0 -> 0xFFFFF99A
+		);
+
+		am335x_wdt_enable_interrupt(wdev,
+			AM335X_WATCHDOG_IRQ_ENABLE_OVF |
+			AM335X_WATCHDOG_IRQ_ENABLE_DLY
+		);
+	}
+}
+
 /*
  *	Allow only one task to hold it open
  */
@@ -216,17 +240,19 @@ static int omap_wdt_open(struct inode *inode, struct file *file)
 	omap_wdt_set_timeout(wdev);
 	omap_wdt_ping(wdev); /* trigger loading of new timeout value */
 	//update 2017.07.22
-	if( wdev->irq ){
-		/* 15msec before delay */
-		am335x_wdt_delay_time(wdev,
-				GET_WLDR_VAL_MSEC(15)//0xFFFFFFC0
-		);
+	//update 2017.07.22 -> 2019.01.22
+	am335x_wdt_set_before_interrupt(wdev);
+	// if( wdev->irq ){
+	// 	/* 100msec before delay */
+	// 	am335x_wdt_delay_time(wdev,
+	// 			GET_WLDR_VAL_MSEC(100)//0xFFFFFFD0 -> 0xFFFFF99A
+	// 	);
 
-		am335x_wdt_enable_interrupt(wdev,
-			AM335X_WATCHDOG_IRQ_ENABLE_OVF |
-			AM335X_WATCHDOG_IRQ_ENABLE_DLY
-		);
-	}
+	// 	am335x_wdt_enable_interrupt(wdev,
+	// 		AM335X_WATCHDOG_IRQ_ENABLE_OVF |
+	// 		AM335X_WATCHDOG_IRQ_ENABLE_DLY
+	// 	);
+	// }
 	omap_wdt_enable(wdev);
 
 	pm_runtime_put_sync(wdev->dev);
@@ -427,6 +453,16 @@ static int __devinit omap_wdt_probe(struct platform_device *pdev)
 	}
 #ifdef CONFIG_CONTEC_MC34X
 	wdev->restart = &mc341_restart;
+
+ // update test 2020.01.22
+ #ifdef CONFIG_MACH_MC34X_BOOTUP_ENABLE_WATCHDOG_TIMER
+	//omap_wdt_set_timeout(wdev);
+	am335x_wdt_set_before_interrupt(wdev);
+	omap_wdt_enable(wdev);
+
+	omap_wdt_ping(wdev);
+ #endif
+
 #else
 	wdev->restart = NULL;
 #endif

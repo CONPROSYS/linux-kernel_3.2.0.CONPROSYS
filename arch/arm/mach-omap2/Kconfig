@@ -421,6 +421,19 @@ config MACH_MC34X_ENABLE_DUPLICATE_BACKUP
 	default n
 	help
 	Enable mtd6 duplicate patition mode.(SPI-ROM 64MB only)
+config MACH_MC34X_NOTUSE_DEBUG_SERIALPORT0
+	bool "Not used debug serial port uart0"
+	depends on MACH_MC341B10 || MACH_MC341B30 || MACH_MC341B40 || MACH_MC342B00 || MACH_MC341B50 || MACH_MC342B20
+	default n
+	help
+	Not used the debuging serial port (UART0) for CONTEC CONPROSYS.
+
+config MACH_MC34X_BOOTUP_ENABLE_WATCHDOG_TIMER
+	bool "Boot up enable watchdog timer"
+	depends on MACH_MC341B10 || MACH_MC341B30 || MACH_MC341B40 || MACH_MC342B00 || MACH_MC341B50 || MACH_MC342B20
+	default n
+	help
+	Boot up enable watchdog timer. Default time set 300 seconds.
 
 #check comments
 ## LAN TYPE

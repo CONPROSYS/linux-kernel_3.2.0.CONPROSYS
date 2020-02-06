@@ -27,6 +27,13 @@ config KGDB_SERIAL_CONSOLE
 	  Share a serial console with kgdb. Sysrq-g must be used
 	  to break in initially.
 
+config KGDB_OVER_ETHERNET
+	tristate "KGDB: use kgdb over the ethernet"
+	select NETPOLL
+	default n
+	help
+		Share a ethernet console with kgdb.
+
 config KGDB_TESTS
 	bool "KGDB: internal test suite"
 	default n
