@@ -108,7 +108,7 @@
 //                             (12)  Bugfix Pullup/Pulldown set Pin mode.
 //                                      * I2C0 and I2C1 disable pull down.
 //                                      * Change gpmc_wen pin mode gpio2_4 and input pulldown for mc341 series.(not other series.) 
-//
+//                             (13) Change musb_babble_workaround in ti81xx_interrupt.
 //#define MC341LAN2 (1)
 #define MC341
 #ifndef MC341
