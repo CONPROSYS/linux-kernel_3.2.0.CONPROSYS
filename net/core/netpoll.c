@@ -210,6 +210,14 @@ static void netpoll_poll_dev(struct net_device *dev)
 	zap_completion_queue();
 }
 
+#ifdef CONFIG_KGDB_OVER_ETHERNET
+void netpoll_poll(struct netpoll *np)
+{
+	netpoll_poll_dev(np->dev);
+}
+EXPORT_SYMBOL(netpoll_poll);
+#endif
+
 static void refill_skbs(void)
 {
 	struct sk_buff *skb;

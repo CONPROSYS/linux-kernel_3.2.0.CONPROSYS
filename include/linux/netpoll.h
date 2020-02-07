@@ -40,6 +40,10 @@ struct netpoll_info {
 	struct netpoll *netpoll;
 };
 
+#ifdef CONFIG_KGDB_OVER_ETHERNET
+void netpoll_poll(struct netpoll *np);
+#endif
+
 void netpoll_send_udp(struct netpoll *np, const char *msg, int len);
 void netpoll_print_options(struct netpoll *np);
 int netpoll_parse_options(struct netpoll *np, char *opt);

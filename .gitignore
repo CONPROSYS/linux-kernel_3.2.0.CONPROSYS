@@ -93,5 +93,6 @@ GTAGS
 *.1lan
 *.novlan
 *.2lan
+arch/arm/boot/makesum
 
 !.travis.yml
