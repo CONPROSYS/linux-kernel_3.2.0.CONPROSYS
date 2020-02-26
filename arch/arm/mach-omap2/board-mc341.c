@@ -2399,6 +2399,16 @@ static struct tps65910_board am335x_tps65910_info = {
 	.tps65910_pmic_init_data[TPS65910_REG_VMMC]	= &am335x_dummy,
 };
 
+// update 2020.02.25 I2C GPIO Expander Update
+#include <linux/i2c/pca953x.h>
+
+#define I2C_GPIO_EXTPANDER_BASE_PIN		GPIO_TO_PIN( 4, 0 )
+
+static struct pca953x_platform_data pca9536_data = {
+	.gpio_base	= I2C_GPIO_EXTPANDER_BASE_PIN,
+};
+// update 2020.02.25 End
+
 /*
 * Daughter board Detection.
 * Every board has a ID memory (EEPROM) on board. We probe these devices at
@@ -2492,6 +2502,12 @@ static struct i2c_board_info __initdata mc341_i2c1_boardinfo[] = {
 		I2C_BOARD_INFO("rfid", 0x54), // RFID
 	},
 
+// update 2020.02.25 I2C GPIO Expander Update
+	{
+		I2C_BOARD_INFO("pca9536", 0x41), // I2C GPIO Expander
+		.platform_data = &pca9536_data,
+	},
+// update 2020.02.25 End
 
 
 };
