@@ -509,6 +509,15 @@ static int __devexit omap_wdt_remove(struct platform_device *pdev)
 	if (!res)
 		return -ENOENT;
 
+ // update test 2020.02.26
+ #ifdef CONFIG_MACH_MC34X_BOOTUP_ENABLE_WATCHDOG_TIMER
+
+	pr_info("OMAP Watchdog Timer Stop");
+	pm_runtime_get_sync(wdev->dev);
+	omap_wdt_disable(wdev);
+	pm_runtime_put_sync(wdev->dev);
+ #endif
+
 	misc_deregister(&(wdev->omap_wdt_miscdev));
 	release_mem_region(res->start, resource_size(res));
 	platform_set_drvdata(pdev, NULL);
