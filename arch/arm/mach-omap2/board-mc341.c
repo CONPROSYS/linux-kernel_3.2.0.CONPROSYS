@@ -117,8 +117,8 @@
 */
 #endif
 
-// update 2020.02.26
-#define CPS_KERNEL_VERSION "Ver.2.4.0 (build: 2020.02.26) "
+// update 2020.02.27
+#define CPS_KERNEL_VERSION "Ver.2.4.0 (build: 2020.02.27) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>
