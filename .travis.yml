@@ -8,8 +8,8 @@ os :
 
 dist :
 #  - trusty
-  - xenial
-# - bionic
+#  - xenial
+ - bionic
 
 branches :
   except :
