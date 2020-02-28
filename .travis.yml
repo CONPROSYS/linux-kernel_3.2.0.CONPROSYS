@@ -49,7 +49,11 @@ before_install:
   - echo  "$GCC_COMP"
   - ls /etc/apt/
   - ls /etc/apt/sources.list.d/
+  - cat /etc/apt/sources.list
+  - cat /etc/apt/sources.list.travis-build.bak
   - cat /etc/apt/sources.list.d/pgdg.list
+  - sudo add-apt-repository universe
+  - sudo apt-get update
   - sudo apt-get install -y $GCC_COMP libncurses5-dev binutils-arm-linux-gnueabi u-boot-tools
   - export CROSS_COMPILE=arm-linux-gnueabi-
   - export ARCH=arm
