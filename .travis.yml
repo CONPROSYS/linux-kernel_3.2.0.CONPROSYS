@@ -21,7 +21,7 @@ compiler:
   - arm-linux-gnueabi-gcc-5
   - arm-linux-gnueabi-gcc-6
   - arm-linux-gnueabi-gcc-7
-  - arm-linux-gnueabi-gcc-8       
+#  - arm-linux-gnueabi-gcc-8       
 env:
   - DEFCONF=CPS-MC341-ADSCX.novlan_defconfig
   - DEFCONF=CPS-MC341-ADSCX.1lan_defconfig
@@ -47,6 +47,9 @@ before_install:
   - if [[ $TRAVIS_COMPILER = "arm-linux-gnueabi-gcc-5" ]];then GCC_COMP=gcc-5-arm-linux-gnueabi; fi
   - if [[ $TRAVIS_COMPILER = "arm-linux-gnueabi-gcc-4.7" ]];then GCC_COMP=gcc-4.7-arm-linux-gnueabi; fi
   - echo  "$GCC_COMP"
+  - echo "deb http://archive.ubuntu.com/ubuntu/ xenial main restricted" >> "/etc/apt/sources.list"
+  - echo "deb http://archive.ubuntu.com/ubuntu/ xenial universe restricted" >> "/etc/apt/sources.list"
+  - sudo apt-get update
   - sudo apt-get install -y $GCC_COMP libncurses5-dev binutils-arm-linux-gnueabi u-boot-tools
   - export CROSS_COMPILE=arm-linux-gnueabi-
   - export ARCH=arm
