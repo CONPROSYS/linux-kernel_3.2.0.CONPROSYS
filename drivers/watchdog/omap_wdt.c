@@ -282,7 +282,8 @@ static int omap_wdt_release(struct inode *inode, struct file *file)
 	printk(KERN_CRIT "omap_wdt: Unexpected close, not stopping!\n");
 #endif
 #endif
-	wdev->omap_wdt_users = 0;
+//	wdev->omap_wdt_users = 0;
+	test_and_clear_bit(1, (unsigned long *)&(wdev->omap_wdt_users));
 
 	return 0;
 }
@@ -461,6 +462,9 @@ static int __devinit omap_wdt_probe(struct platform_device *pdev)
 	omap_wdt_enable(wdev);
 
 	omap_wdt_ping(wdev);
+
+	wdev->omap_wdt_users = 4;
+
  #endif
 
 #else
@@ -494,6 +498,7 @@ static void omap_wdt_shutdown(struct platform_device *pdev)
 		pm_runtime_get_sync(wdev->dev);
 		omap_wdt_disable(wdev);
 		pm_runtime_put_sync(wdev->dev);
+		wdev->omap_wdt_users = 0;
 	}
 }
 

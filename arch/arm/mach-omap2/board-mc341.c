@@ -94,6 +94,7 @@
 //                                      * Add Watchdog Enable ioctl and Watchdog Disable ioctl. 
 //                                      * Add the enable watchdog at start kernel.
 //                                      * Adjust time at watchdog timer driver. (2020/01/22)
+//                                      * remove disable watchdog timer driver.
 //                             (3) Merge driver for kernel v3.2.102.
 //                                      * /drivers/usb/serial all devices source
 //                                      * /drivers/usb/class/cdc_acm.c and cdc_acm.h
@@ -116,8 +117,8 @@
 */
 #endif
 
-// update 2020.02.06
-#define CPS_KERNEL_VERSION "Ver.2.4.0 (build: 2020.02.06) "
+// update 2020.03.02
+#define CPS_KERNEL_VERSION "Ver.2.4.0 (build: 2020.03.02) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>
