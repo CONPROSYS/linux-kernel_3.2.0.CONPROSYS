@@ -1647,6 +1647,42 @@ static void usb1_init(int evm_id, int profile)
 	return;
 }
 
+#define	OPCODE_FAST_READ	0x0b	/* Read data bytes (high frequency) */
+#define	OPCODE_RDID		0x9f	/* Read JEDEC ID */
+#define	OPCODE_FAST_READ_4B	0x0c	/* Read data bytes (high frequency) */
+
+static void spi_check_flash_byte_addressing_mode( struct spi_device *spi , char* flash_type ){
+	int			tmp;
+	u8			code[6] ;
+	u8 			data = 0;
+
+	memset (&code[0], 0x00, 5 );
+	code[0] = OPCODE_FAST_READ;
+
+	// Address 0x000000 reads ( return value 0x00 [success]  ) 
+	// command + address (3byte) + dummy 1 cycle byte 
+
+	tmp = spi_write_then_read(spi, &code[0], 5, &data, 1);
+
+	if ( data == 0x00 ){
+		pr_info("%s : 3 byte addressing mode\n", flash_type);
+	}else if( data == 0xff ){
+		memset (&code[0], 0x00, 6 );
+		code[0] = OPCODE_FAST_READ_4B;
+		// 4 byte mode Address 0x00000000 reads ( return value 0x00 [success]  ) 
+		// command + address (4byte) + dummy 1 cycle byte 
+
+		tmp = spi_write_then_read(spi, &code[0], 6, &data, 1);
+
+		if( data == 0x00 ){
+			pr_info("%s : 4 byte addressing mode\n", flash_type);	
+		}
+		else if ( data == 0xff ){
+			pr_info("%s : the clearing spi-rom data\n", flash_type);
+		}
+	}
+}
+
 //update 2016.09.09 (1) Add spi_flash find funciton
 static int spi_find_flash_index( struct spi_board_info *bi )
 {
@@ -1655,10 +1691,11 @@ static int spi_find_flash_index( struct spi_board_info *bi )
 	struct spi_device *spi;
 
 	int			tmp;
-	u8			code = 0x9f; // OPCODE_RDID
+	u8			code = OPCODE_RDID; // OPCODE_RDID
 	u8			id[5];
 	u32			jedec;
 	u16			ext_jedec;
+
 
 	if( bi->modalias == NULL ){
 		pr_err("spi_find_flash_index: modalias is NULL.");
@@ -1709,6 +1746,11 @@ static int spi_find_flash_index( struct spi_board_info *bi )
 
 	if( index > -1 )
 		bi->platform_data = &mc341_spi_flash[index];
+
+/* debug */
+	if( index == 1 || index == 2 ){
+		spi_check_flash_byte_addressing_mode( spi , mc341_spi_flash[index].type );
+	}
 
 	spi_unregister_device(spi);
 
