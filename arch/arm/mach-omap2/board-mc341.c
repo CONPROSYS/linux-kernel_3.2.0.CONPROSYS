@@ -1,7 +1,7 @@
 /*
  * Code for CONPROSYS Series.by the CONTEC.
  *
- * Copyright (C) 2015-2018 CONTEC.Co.,Ltd. - http://www.contec.com/jp
+ * Copyright (C) 2015-2020 CONTEC.Co.,Ltd. - http://www.contec.com/jp
  * Based by board-am34xevm.c. 
  *
  * This program is free software; you can redistribute it and/or
@@ -89,6 +89,7 @@
 // update 2019.09.05 Ver.2.3.5 (1) Bugfix warning wd_timer2 : _omap4_disable_module message.	
 //                                   (Tree : _omap4_disable_module > _omap4_wait_target_disable > omap4_cminst_wait_module_idle )
 // update 2019.09.20 Ver.2.3.6 (1) Bugfix mc341_reset function.	
+// update 2020.03.10 Ver.2.3.7 (1) Bugfix Check spirom byte mode.
 //#define MC341LAN2 (1)
 #define MC341
 #ifndef MC341
@@ -96,8 +97,8 @@
 */
 #endif
 
-// update 2019.09.20
-#define CPS_KERNEL_VERSION "Ver.2.3.6 (build: 2019.09.20) "
+// update 2020.03.10
+#define CPS_KERNEL_VERSION "Ver.2.3.7 (build: 2020.03.10) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -1647,10 +1648,12 @@ static void usb1_init(int evm_id, int profile)
 	return;
 }
 
+//update 2020.03.10
 #define	OPCODE_FAST_READ	0x0b	/* Read data bytes (high frequency) */
 #define	OPCODE_RDID		0x9f	/* Read JEDEC ID */
 #define	OPCODE_FAST_READ_4B	0x0c	/* Read data bytes (high frequency) */
 
+//update 2020.03.10
 static void spi_check_flash_byte_addressing_mode( struct spi_device *spi , char* flash_type ){
 	int			tmp;
 	u8			code[6] ;
@@ -1747,7 +1750,7 @@ static int spi_find_flash_index( struct spi_board_info *bi )
 	if( index > -1 )
 		bi->platform_data = &mc341_spi_flash[index];
 
-/* debug */
+/* update 2020.03.10 */
 	if( index == 1 || index == 2 ){
 		spi_check_flash_byte_addressing_mode( spi , mc341_spi_flash[index].type );
 	}
