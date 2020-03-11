@@ -1682,7 +1682,11 @@ static void spi_check_flash_byte_addressing_mode( struct spi_device *spi , char*
 		}
 		else if ( data == 0xff ){
 			pr_info("%s : the clearing spi-rom data\n", flash_type);
+		}else{
+			pr_debug("%s : <4> unknown %x \n", flash_type, data );
 		}
+	}else{
+		pr_debug("%s : <3> unknown %x \n", flash_type, data );		
 	}
 }
 
