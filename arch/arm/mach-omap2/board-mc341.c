@@ -90,7 +90,7 @@
 //                                   (Tree : _omap4_disable_module > _omap4_wait_target_disable > omap4_cminst_wait_module_idle )
 // update 2019.09.20 Ver.2.3.6 (1) Bugfix mc341_reset function.	
 // update 2020.03.10 Ver.2.3.7 (1) Bugfix Check spirom byte mode.
-// update 2020.03.12 Ver.2.4.0 (1) Bugfix CVE-2019-21477 to CVE-2019-21479.
+// update 2020.03.13 Ver.2.4.0 (1) Bugfix CVE-2019-21477 to CVE-2019-21479.
 //                             (2) Change Watchdog Timer driver.
 //                                      * Add Watchdog Enable ioctl and Watchdog Disable ioctl. 
 //                                      * Add the enable watchdog at start kernel.
@@ -104,13 +104,12 @@
 //                             (6) Bugfix driver/net/wireless/rtl8812au/include/ieee80211.h
 //                             (7) Fixed Error "make module" command for gcc5.
 //                             (8) Improved for GDB.
-//                             (9) Modify value of "CONFIG_CFG80211" from "m" to "y" in defconfig for MC341-ADSCX series.
-//                             (10) Add KGDB console over Ethernet driver. 
-//                             (11) Bugfix mm/kmemleak.c Change softirq() to in_serving_softirq(). 
-//                             (12)  Bugfix Pullup/Pulldown set Pin mode.
+//                             (9) Add KGDB console over Ethernet driver. 
+//                             (10) Bugfix mm/kmemleak.c Change softirq() to in_serving_softirq(). 
+//                             (11)  Bugfix Pullup/Pulldown set Pin mode.
 //                                      * I2C0 and I2C1 disable pull down.
 //                                      * Change gpmc_wen pin mode gpio2_4 and input pulldown for mc341 series.(not other series.) 
-//                             (13) Change musb_babble_workaround in ti81xx_interrupt.
+//                             (12) Change musb_babble_workaround in ti81xx_interrupt.
 //#define MC341LAN2 (1)
 #define MC341
 #ifndef MC341
@@ -119,7 +118,7 @@
 #endif
 
 // update 2020.03.12
-#define CPS_KERNEL_VERSION "Ver.2.4.0 (build: 2020.03.12) "
+#define CPS_KERNEL_VERSION "Ver.2.4.0 (build: 2020.03.13) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>
