@@ -47,7 +47,7 @@ before_install:
   - if [[ $TRAVIS_COMPILER = "arm-linux-gnueabi-gcc-6" ]];then GCC_COMP=gcc-6-arm-linux-gnueabi; fi
   - if [[ $TRAVIS_COMPILER = "arm-linux-gnueabi-gcc-5" ]];then GCC_COMP=gcc-5-arm-linux-gnueabi; fi
   - if [[ $TRAVIS_COMPILER = "arm-linux-gnueabi-gcc-4.7" ]];then GCC_COMP=gcc-4.7-arm-linux-gnueabi; fi
-  - if [[ $TRAVIS_COMPILER = "arm-linaro-gnueabi-gcc-4.9" ]];then if [[ "$TRAVIS_CPU_ARCH" == "amd64" ]];then wget -c "https://releases.linaro.org/components/toolchain/binaries/latest-4/arm-linux-gnueabi/gcc-linaro-4.9.4-2017.01-x86_64_arm-linux-gnueabi.tar.xz"; tar xfJ gcc-linaro-4.9.4-2017.01-x86_64_arm-linux-gnueabi.tar.xz ; cd ./gcc-linaro-4.9.4-2017.01-x86_64_arm-linux-gnueabi; sudo mv -f * /usr;  fi; fi
+  - if [[ $TRAVIS_COMPILER = "arm-linaro-gnueabi-gcc-4.9" ]];then if [[ "$TRAVIS_CPU_ARCH" == "amd64" ]];then wget -c "https://releases.linaro.org/components/toolchain/binaries/latest-4/arm-linux-gnueabi/gcc-linaro-4.9.4-2017.01-x86_64_arm-linux-gnueabi.tar.xz"; tar xfJ gcc-linaro-4.9.4-2017.01-x86_64_arm-linux-gnueabi.tar.xz ; cd ./gcc-linaro-4.9.4-2017.01-x86_64_arm-linux-gnueabi; sudo cp -f * /usr; cd ../; sudo rm -fR  ./gcc-linaro-4.9.4-2017.01-x86_64_arm-linux-gnueabi; fi; fi
   - echo  "$GCC_COMP"
   - echo "deb http://archive.ubuntu.com/ubuntu/ xenial main restricted" >> "/etc/apt/sources.list"
   - echo "deb http://archive.ubuntu.com/ubuntu/ xenial universe restricted" >> "/etc/apt/sources.list"
