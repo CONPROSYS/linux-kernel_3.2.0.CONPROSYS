@@ -55,7 +55,7 @@ before_install:
   - sudo apt-get install -y $GCC_COMP libncurses5-dev binutils-arm-linux-gnueabi u-boot-tools
   - export CROSS_COMPILE=arm-linux-gnueabi-
   - export ARCH=arm
-  - sudo ln -s /usr/bin/$TRAVIS_COMPILER /usr/bin/arm-linux-gnueabi-gcc
+  - if [[ "$GCC_COMP" != "" ]];then sudo ln -s /usr/bin/$TRAVIS_COMPILER /usr/bin/arm-linux-gnueabi-gcc; fi
   - export CPU_COUNT=`cat /proc/cpuinfo | grep -c processor`
   - export JOB_NUMBER=`expr $CPU_COUNT + 1`
 
