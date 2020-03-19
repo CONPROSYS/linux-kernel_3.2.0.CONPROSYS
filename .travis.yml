@@ -51,7 +51,7 @@ before_install:
   - if [[ $TRAVIS_COMPILER = "arm-linaro-gnueabi-gcc-4.9" ]];then if [[ "$TRAVIS_CPU_ARCH" == "amd64" ]];then LINARO_GCC_COMP=gcc-linaro-4.9.4-2017.01-x86_64_arm-linux-gnueabi; LINARO_WGET="latest-4/arm-linux-gnueabi"; fi; fi
   - if [[ $TRAVIS_COMPILER = "arm-linaro-gnueabihf-gcc-4.9" ]];then if [[ "$TRAVIS_CPU_ARCH" == "amd64" ]];then LINARO_GCC_COMP=gcc-linaro-4.9.4-2017.01-x86_64_arm-linux-gnueabihf; LINARO_WGET="latest-4/arm-linux-gnueabihf"; fi; fi
   - echo  "$GCC_COMP"
-  - echo "$TRAVIS_COMPILER" | awk -F- '{print $1-$2-$3}'
+  - echo "$TRAVIS_COMPILER" | awk -F'-' '{print $1-$2-$3}'
   - echo "deb http://archive.ubuntu.com/ubuntu/ xenial main restricted" >> "/etc/apt/sources.list"
   - echo "deb http://archive.ubuntu.com/ubuntu/ xenial universe restricted" >> "/etc/apt/sources.list"
   - sudo apt-get update
