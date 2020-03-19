@@ -61,7 +61,7 @@ before_install:
   - if [[ "$LINARO_GCC_COMP" != "" ]];then wget -c "https://releases.linaro.org/components/toolchain/binaries/${LINARO_WGET}/${LINARO_GCC_COMP}.tar.xz"; tar xfJ ${LINARO_GCC_COMP}.tar.xz ; cd ./${LINARO_GCC_COMP}; sudo cp -fR * /usr; cd ../; sudo rm -fR  ./${LINARO_GCC_COMP}; fi;
   - export CROSS_COMPILE=arm-linux-${CROSS_PREFIX}-
   - export ARCH=arm
-  - if [[ "$GCC_COMP" != "" ]];then sudo ln -s /usr/bin/$TRAVIS_COMPILER /usr/bin/arm-linux-${CROSS_PREFIX}; fi
+  - if [[ "$GCC_COMP" != "" ]];then sudo ln -s /usr/bin/$TRAVIS_COMPILER /usr/bin/arm-linux-${CROSS_PREFIX}-gcc; fi
   - export CPU_COUNT=`cat /proc/cpuinfo | grep -c processor`
   - export JOB_NUMBER=`expr $CPU_COUNT + 1`
 
