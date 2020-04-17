@@ -4391,7 +4391,7 @@ static int	cfg80211_rtw_change_station(struct wiphy *wiphy, struct net_device *n
 
 struct sta_info *rtw_sta_info_get_by_idx(const int idx, struct sta_priv *pstapriv)
 
-{
+{
 	_list	*phead, *plist;
 	struct sta_info *psta = NULL;
 	int i = 0;
@@ -6222,7 +6222,7 @@ static void rtw_cfg80211_preinit_wiphy(_adapter *padapter, struct wiphy *wiphy)
 
 #if defined(CONFIG_PM) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0))
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
-	wiphy->wowlan = &wowlan_stub;
+	wiphy->wowlan = wowlan_stub;
 #else
 	wiphy->wowlan = &wowlan_stub;
 #endif

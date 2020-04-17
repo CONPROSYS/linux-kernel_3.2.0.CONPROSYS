@@ -476,6 +476,10 @@ static void _rtl_usb_rx_process_noagg(struct ieee80211_hw *hw,
 			if (unicast)
 				rtlpriv->link_info.num_rx_inperiod++;
 		}
+
+		/* static bcn for roaming */
+		rtl_beacon_statistic(hw, skb);
+
 		if (likely(rtl_action_proc(hw, skb, false))) {
 			struct sk_buff *uskb = NULL;
 			u8 *pdata;

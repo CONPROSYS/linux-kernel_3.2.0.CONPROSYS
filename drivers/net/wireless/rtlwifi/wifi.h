@@ -1332,6 +1332,10 @@ struct rtl_stats {
 };
 
 struct rt_link_detect {
+	/* count for roaming */
+	u32 bcn_rx_inperiod;
+	u32 roam_times;
+
 	u32 num_tx_in4period[4];
 	u32 num_rx_in4period[4];
 
@@ -1339,6 +1343,8 @@ struct rt_link_detect {
 	u32 num_rx_inperiod;
 
 	bool busytraffic;
+	bool tx_busy_traffic;
+	bool rx_busy_traffic;
 	bool higher_busytraffic;
 	bool higher_busyrxtraffic;
 

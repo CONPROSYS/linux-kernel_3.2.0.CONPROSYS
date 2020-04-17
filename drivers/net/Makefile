@@ -69,3 +69,8 @@ obj-$(CONFIG_USB_USBNET)        += usb/
 obj-$(CONFIG_USB_ZD1201)        += usb/
 obj-$(CONFIG_USB_IPHETH)        += usb/
 obj-$(CONFIG_USB_CDC_PHONET)   += usb/
+
+#
+# KDGB over ethernet Drivers
+#
+obj-$(CONFIG_KGDB_OVER_ETHERNET) += kgdboe.o

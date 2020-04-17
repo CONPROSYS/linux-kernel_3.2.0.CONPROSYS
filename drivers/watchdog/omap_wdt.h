@@ -45,7 +45,11 @@
  * with the 60 second default assumed by most tools and docs.
  */
 #define TIMER_MARGIN_MAX	(24 * 60 * 60)	/* 1 day */
-#define TIMER_MARGIN_DEFAULT	60	/* 60 secs */
+#ifdef CONFIG_MACH_MC34X_BOOTUP_ENABLE_WATCHDOG_TIMER // update test 2020.01.22
+ #define TIMER_MARGIN_DEFAULT	300	/* 300 secs */ 
+#else
+ #define TIMER_MARGIN_DEFAULT	60	/* 60 secs */
+#endif
 #define TIMER_MARGIN_MIN	1
 
 #define PTV			0	/* prescale */

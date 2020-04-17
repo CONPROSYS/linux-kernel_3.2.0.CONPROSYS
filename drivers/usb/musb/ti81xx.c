@@ -957,12 +957,13 @@ void musb_babble_workaround(struct musb *musb)
 			gpio_request(GPIO_POWER_USB_MC341, "GPIO_POWER_USB");
 			gpio_direction_output(GPIO_POWER_USB_MC341, 0);
 			gpio_export(GPIO_POWER_USB_MC341, true ) ;
+			msleep_interruptible( 100 );			
 			// 37
 			gpio_request(GPIO_POWER_RESET_MC341, "GPIO_POWER_RESET");
 			gpio_direction_output(GPIO_POWER_RESET_MC341, 0);
 			gpio_export(GPIO_POWER_RESET_MC341, true ) ;
-			udelay(100);
-
+			//udelay(100);
+			msleep_interruptible( 100 ); // 100 msec
 			//36
 			gpio_request(GPIO_POWER_24V_MC341, "GPIO_POWER_24V_MC341");
 			gpio_direction_output(GPIO_POWER_24V_MC341, 0);
@@ -990,12 +991,14 @@ void musb_babble_workaround(struct musb *musb)
 		// 36
 		gpio_direction_output(GPIO_POWER_24V_MC341, 1);
 
-		mdelay(2500); // 2.5sec
+		//mdelay(5000); // 5sec
+		msleep_interruptible( 5000 ); // 5sec
 
 		// 37
 		gpio_direction_output(GPIO_POWER_RESET_MC341, 1);
 
-		mdelay(500);
+		//mdelay(2500); // 2.5sec
+		msleep_interruptible( 2500 ) ;
 
 		// 23
 		gpio_direction_output(GPIO_POWER_USB_MC341, 1);
@@ -1177,6 +1180,13 @@ static irqreturn_t ti81xx_interrupt(int irq, void *hci)
 		&& is_host_enabled(musb))
 			is_babble = 1;
 
+	// update 2019.12.26
+	if (musb->ep0_rx_error_counter > PACKET_DESTROY_PHY_RESET_COUNT ){
+		is_babble = 1;
+		musb->ep0_rx_error_counter = 0;
+	}
+
+
 	if (is_babble) {
 		if (musb->enable_babble_work != BABBLE_WORKAROUND_3)
 			musb->int_usb = MUSB_INTR_DISCONNECT;
@@ -1245,11 +1255,11 @@ static irqreturn_t ti81xx_interrupt(int irq, void *hci)
 		ret |= musb_interrupt(musb);
 
 	// update 2017.12.08
-	if (musb->ep0_rx_error_counter > PACKET_DESTROY_PHY_RESET_COUNT ){
-		dev_dbg(musb->controller,"reset phy");
-		musb_babble_workaround(musb);
-		musb->ep0_rx_error_counter = 0;
-	}
+	// if (musb->ep0_rx_error_counter > PACKET_DESTROY_PHY_RESET_COUNT ){
+	// 	dev_dbg(musb->controller,"reset phy");
+	// 	musb_babble_workaround(musb);
+	// 	musb->ep0_rx_error_counter = 0;
+	// }
 
  eoi:
 	/* EOI needs to be written for the IRQ to be re-asserted. */

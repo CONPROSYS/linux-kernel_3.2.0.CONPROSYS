@@ -90,6 +90,26 @@
 //                                   (Tree : _omap4_disable_module > _omap4_wait_target_disable > omap4_cminst_wait_module_idle )
 // update 2019.09.20 Ver.2.3.6 (1) Bugfix mc341_reset function.	
 // update 2020.03.10 Ver.2.3.7 (1) Bugfix Check spirom byte mode.
+// update 2020.03.13 Ver.2.4.0 (1) Bugfix CVE-2019-21477 to CVE-2019-21479.
+//                             (2) Change Watchdog Timer driver.
+//                                      * Add Watchdog Enable ioctl and Watchdog Disable ioctl. 
+//                                      * Add the enable watchdog at start kernel.
+//                                      * Adjust time at watchdog timer driver. (2020/01/22)
+//                                      * remove disable watchdog timer driver.
+//                             (3) Merge driver for kernel v3.2.102.
+//                                      * /drivers/usb/serial all devices source
+//                                      * /drivers/usb/class/cdc_acm.c and cdc_acm.h
+//                             (4) Fixed problem that rtlwifi/rtl8192cu prevents reassociation.
+//                             (5) Enable rtl8812au wireless-lan driver. 
+//                             (6) Bugfix driver/net/wireless/rtl8812au/include/ieee80211.h
+//                             (7) Fixed Error "make module" command for gcc5.
+//                             (8) Improved for GDB.
+//                             (9) Add KGDB console over Ethernet driver. 
+//                             (10) Bugfix mm/kmemleak.c Change softirq() to in_serving_softirq(). 
+//                             (11)  Bugfix Pullup/Pulldown set Pin mode.
+//                                      * I2C0 and I2C1 disable pull down.
+//                                      * Change gpmc_wen pin mode gpio2_4 and input pulldown for mc341 series.(not other series.) 
+//                             (12) Change musb_babble_workaround in ti81xx_interrupt.
 //#define MC341LAN2 (1)
 #define MC341
 #ifndef MC341
@@ -97,8 +117,8 @@
 */
 #endif
 
-// update 2020.03.10
-#define CPS_KERNEL_VERSION "Ver.2.3.7 (build: 2020.03.10) "
+// update 2020.03.12
+#define CPS_KERNEL_VERSION "Ver.2.4.0 (build: 2020.03.13) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -325,20 +345,25 @@ static struct omap_board_mux board_mux[] __initdata = {
 
 
 	AM33XX_MUX(I2C0_SDA, OMAP_MUX_MODE0 | AM33XX_SLEWCTRL_SLOW |
-			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
+			AM33XX_PIN_INPUT | AM33XX_PIN_OUTPUT),	// 2020.02.06 Change  from AM33XX_INPUT_EN to AM33XX_PIN_INPUT
 	AM33XX_MUX(I2C0_SCL, OMAP_MUX_MODE0 | AM33XX_SLEWCTRL_SLOW |
-			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
+			AM33XX_PIN_INPUT | AM33XX_PIN_OUTPUT),	// 2020.02.06 Change  from AM33XX_INPUT_EN to AM33XX_PIN_INPUT
 
 // #ifndef CONFIG_MACH_MC342B20
 #if !defined(CONFIG_MACH_MC342B20) && !defined(CONFIG_MACH_MC341B00) // change 2018.03.03 (1)
 
 // for i2c1
 	AM33XX_MUX(UART0_CTSN, OMAP_MUX_MODE3 | AM33XX_SLEWCTRL_SLOW |
-			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
+			AM33XX_PIN_INPUT | AM33XX_PIN_OUTPUT),	// update 2020.02.06 Change  from AM33XX_INPUT_EN to AM33XX_PIN_INPUT
 	AM33XX_MUX(UART0_RTSN, OMAP_MUX_MODE3 | AM33XX_SLEWCTRL_SLOW |
-			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
+			AM33XX_PIN_INPUT | AM33XX_PIN_OUTPUT),	// update 2020.02.06 Change  from AM33XX_INPUT_EN to AM33XX_PIN_INPUT
 	// update 2016.10.27 (1)
 	AM33XX_MUX(MII1_TXD2, OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP),
+#endif
+
+#ifdef CONFIG_MACH_MC34X_NOTUSE_DEBUG_SERIALPORT0 // update 2020.02.06
+	AM33XX_MUX(UART0_TXD, OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP),
+	AM33XX_MUX(UART0_RXD, OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP),
 #endif
 
 // update 2016.10.27 (2) DEBUGING GPIO-IN GPIO(2, 23)
@@ -689,6 +714,7 @@ static struct pinmux_config mc341_gpio_keys_pin_mux[] = {
 	// update 2016.10.27 (1)
 	//	{"mii1_txd2.gpio0_17", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},/* RTC_INTn */
 	{"mii1_txd2.gpio0_17", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},/* RTC_INTn */
+	{"gpmc_wen.gpio2_4", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLDOWN }, /* N.C Pin */
 	{NULL, 0},
 };
 
@@ -1764,6 +1790,53 @@ static int spi_find_flash_index( struct spi_board_info *bi )
 	return index;
 }
 
+//update 2020.01.17 (1) Add spi_flash find funciton
+static int spi_reset_flash( const struct spi_board_info *bi )
+{
+
+	struct spi_master *master;
+	struct spi_device *spi;
+
+	int			err = -1;
+	u8			code1 = 0x66; // OPCODE_RESET_ENABLE
+	u8			code2 = 0x99; // OPCODE_RESET_MEMORY
+
+	if( bi->modalias == NULL ){
+		pr_err("spi_reset_flash: modalias is NULL.");
+		return err;
+	}
+
+	master = spi_busnum_to_master( bi->bus_num );
+
+	if( !master ){
+		pr_err("spi_reset_flash: Error spi_busnum_to_master");
+		return err;
+	}
+
+	spi = spi_new_device( master, bi );
+
+	if( !spi ){
+		pr_err("spi_find_flash_index: Error spi_new_device");
+		return err;
+	}
+
+	err = spi_write(spi, &code1, 1);
+	if (err < 0) {
+		pr_err("%s: error %d RESET_ENABLE \n",
+				dev_name(&spi->dev), err);
+	}
+	else{
+		err = spi_write(spi, &code2, 1);
+		if (err < 0) {
+			pr_err("%s: error %d RESET_MEMORY \n",
+					dev_name(&spi->dev), err);
+		}
+	}
+	spi_unregister_device(spi);
+
+	return err;
+}
+
 // setup spi0
 static void spi0_init(int evm_id, int profile)
 {
@@ -2375,6 +2448,16 @@ static struct tps65910_board am335x_tps65910_info = {
 	.tps65910_pmic_init_data[TPS65910_REG_VMMC]	= &am335x_dummy,
 };
 
+// update 2020.02.25 I2C GPIO Expander Update
+#include <linux/i2c/pca953x.h>
+
+#define I2C_GPIO_EXTPANDER_BASE_PIN		GPIO_TO_PIN( 4, 0 )
+
+static struct pca953x_platform_data pca9536_data = {
+	.gpio_base	= I2C_GPIO_EXTPANDER_BASE_PIN,
+};
+// update 2020.02.25 End
+
 /*
 * Daughter board Detection.
 * Every board has a ID memory (EEPROM) on board. We probe these devices at
@@ -2468,6 +2551,12 @@ static struct i2c_board_info __initdata mc341_i2c1_boardinfo[] = {
 		I2C_BOARD_INFO("rfid", 0x54), // RFID
 	},
 
+// update 2020.02.25 I2C GPIO Expander Update
+	{
+		I2C_BOARD_INFO("pca9536", 0x41), // I2C GPIO Expander
+		.platform_data = &pca9536_data,
+	},
+// update 2020.02.25 End
 
 
 };
@@ -2812,6 +2901,8 @@ void mc341_restart(char mode, const char *cmd)
 	#define GPIO_RESET_POUT GPIO_TO_PIN( 3, 9 )		//GPIO 105
 #endif
 
+	//spi_reset_flash(&mc341_spi0_slave_info[0]);
+
 	//gpio_free(GPIO_RESET_POUT);
 	label = gpio_is_requested( GPIO_RESET_POUT );
 
@@ -2823,7 +2914,8 @@ void mc341_restart(char mode, const char *cmd)
 			return;			
 		}
 	}
-	
+
+	pr_debug("%s: Gpio Reset", __func__);
 	gpio_direction_output( GPIO_RESET_POUT, 1 );
 
 }
