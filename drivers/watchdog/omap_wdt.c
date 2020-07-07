@@ -301,7 +301,7 @@ static ssize_t omap_wdt_write(struct file *file, const char __user *data,
 	
 	if (len) {
 		if( len == 1 &&
-			!memcmp(&buf[0], &stop_watchdog_code, 1) &&
+			!memcmp(&data[0], &stop_watchdog_code, 1) &&
 			wdev->enable == 1 
 		){
 			pm_runtime_get_sync(wdev->dev);
