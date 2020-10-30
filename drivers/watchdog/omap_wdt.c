@@ -297,8 +297,9 @@ static ssize_t omap_wdt_write(struct file *file, const char __user *data,
 {
 	struct omap_wdt_dev *wdev = file->private_data;
 	char stop_watchdog_code = 'V';
+	unsigned int new_timeout = 0;
+	unsigned int count = 0;
 
-	
 	if (len) {
 		if( len == 1 &&
 			!memcmp(&data[0], &stop_watchdog_code, 1) &&
@@ -309,12 +310,30 @@ static ssize_t omap_wdt_write(struct file *file, const char __user *data,
 			pm_runtime_put_sync(wdev->dev);
 		}
 		else{
-			/* Refresh LOAD_TIME. */
+		
 			pm_runtime_get_sync(wdev->dev);
+
+			spin_lock(&wdt_lock);
+			/* Set new timeout data */
+			if( data[0] >='0' && data[0] <='9' ){
+				for( count = 0; count < len; count ++ ){
+					if ( data[count] >='0' && data[0] <='9' ){
+						new_timeout = new_timeout * 10 + (data[count] - '0' );
+					}
+				}
+				omap_wdt_adjust_timeout( new_timeout );
+
+				if( wdev->enable == 1 )
+							omap_wdt_disable(wdev);
+
+				omap_wdt_set_timeout(wdev);
+
+			}
+
 			if( wdev->enable == 0 )
 				omap_wdt_enable(wdev);
-						
-			spin_lock(&wdt_lock);
+
+			/* Refresh LOAD_TIME. */			
 			omap_wdt_ping(wdev);
 			spin_unlock(&wdt_lock);
 			pm_runtime_put_sync(wdev->dev);
@@ -476,7 +495,7 @@ static int __devinit omap_wdt_probe(struct platform_device *pdev)
 
  // update test 2020.01.22
  #ifdef CONFIG_MACH_MC34X_BOOTUP_ENABLE_WATCHDOG_TIMER
-	//omap_wdt_set_timeout(wdev);
+	omap_wdt_set_timeout(wdev);	// set adjust timer_margin
 	am335x_wdt_set_before_interrupt(wdev);
 	omap_wdt_enable(wdev);
 
