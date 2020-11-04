@@ -317,7 +317,7 @@ static ssize_t omap_wdt_write(struct file *file, const char __user *data,
 			/* Set new timeout data */
 			if( data[0] >='0' && data[0] <='9' ){
 				for( count = 0; count < len; count ++ ){
-					if ( data[count] >='0' && data[0] <='9' ){
+					if ( data[count] >='0' && data[count] <='9' ){
 						new_timeout = new_timeout * 10 + (data[count] - '0' );
 					}
 				}
