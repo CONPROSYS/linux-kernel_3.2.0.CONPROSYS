@@ -110,6 +110,10 @@
 //                                      * I2C0 and I2C1 disable pull down.
 //                                      * Change gpmc_wen pin mode gpio2_4 and input pulldown for mc341 series.(not other series.) 
 //                             (12) Change musb_babble_workaround in ti81xx_interrupt.
+// update 2020.10.30 Ver.2.4.1 (1) Update omap watchdog timer .
+//                                      * support echo "V" command (disable watchdog).
+//                                      * support echo "300" (set timeout).
+//                                      * bugfix set default timeout 300sec, but watchdog reset before 300sec (probe only).
 //#define MC341LAN2 (1)
 #define MC341
 #ifndef MC341
@@ -118,7 +122,7 @@
 #endif
 
 // update 2020.03.12
-#define CPS_KERNEL_VERSION "Ver.2.4.0 (build: 2020.03.13) "
+#define CPS_KERNEL_VERSION "Ver.2.4.1 (build: 2020.10.30) "
 
 #include <linux/kernel.h>
 #include <linux/init.h>

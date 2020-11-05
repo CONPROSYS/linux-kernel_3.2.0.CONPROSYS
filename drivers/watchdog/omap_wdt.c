@@ -66,7 +66,7 @@ struct omap_wdt_dev {
 	unsigned int			irq;		//update 2017.07.22
 	struct resource *mem;
 	struct miscdevice omap_wdt_miscdev;
-
+	unsigned int enable; //update 2020.07.02
 	void (*restart)(char mode, const char *cmd);//update 2017.07.22
 };
 
@@ -99,6 +99,8 @@ static void omap_wdt_enable(struct omap_wdt_dev *wdev)
 	__raw_writel(0x4444, base + OMAP_WATCHDOG_SPR);
 	while ((__raw_readl(base + OMAP_WATCHDOG_WPS)) & 0x10)
 		cpu_relax();
+
+	wdev->enable = 1;
 }
 
 static void omap_wdt_disable(struct omap_wdt_dev *wdev)
@@ -113,6 +115,8 @@ static void omap_wdt_disable(struct omap_wdt_dev *wdev)
 	__raw_writel(0x5555, base + OMAP_WATCHDOG_SPR);	/* TIMER_MODE */
 	while (__raw_readl(base + OMAP_WATCHDOG_WPS) & 0x10)
 		cpu_relax();
+
+	wdev->enable = 0;
 }
 
 static void omap_wdt_adjust_timeout(unsigned new_timeout)
@@ -292,14 +296,48 @@ static ssize_t omap_wdt_write(struct file *file, const char __user *data,
 		size_t len, loff_t *ppos)
 {
 	struct omap_wdt_dev *wdev = file->private_data;
+	char stop_watchdog_code = 'V';
+	unsigned int new_timeout = 0;
+	unsigned int count = 0;
 
-	/* Refresh LOAD_TIME. */
 	if (len) {
-		pm_runtime_get_sync(wdev->dev);
-		spin_lock(&wdt_lock);
-		omap_wdt_ping(wdev);
-		spin_unlock(&wdt_lock);
-		pm_runtime_put_sync(wdev->dev);
+		if( len == 1 &&
+			!memcmp(&data[0], &stop_watchdog_code, 1) &&
+			wdev->enable == 1 
+		){
+			pm_runtime_get_sync(wdev->dev);
+			omap_wdt_disable(wdev);
+			pm_runtime_put_sync(wdev->dev);
+		}
+		else{
+		
+			pm_runtime_get_sync(wdev->dev);
+
+			spin_lock(&wdt_lock);
+			/* Set new timeout data */
+			if( data[0] >='0' && data[0] <='9' ){
+				for( count = 0; count < len; count ++ ){
+					if ( data[count] >='0' && data[count] <='9' ){
+						new_timeout = new_timeout * 10 + (data[count] - '0' );
+					}
+				}
+				omap_wdt_adjust_timeout( new_timeout );
+
+				if( wdev->enable == 1 )
+							omap_wdt_disable(wdev);
+
+				omap_wdt_set_timeout(wdev);
+
+			}
+
+			if( wdev->enable == 0 )
+				omap_wdt_enable(wdev);
+
+			/* Refresh LOAD_TIME. */			
+			omap_wdt_ping(wdev);
+			spin_unlock(&wdt_lock);
+			pm_runtime_put_sync(wdev->dev);
+		}
 	}
 	return len;
 }
@@ -457,7 +495,7 @@ static int __devinit omap_wdt_probe(struct platform_device *pdev)
 
  // update test 2020.01.22
  #ifdef CONFIG_MACH_MC34X_BOOTUP_ENABLE_WATCHDOG_TIMER
-	//omap_wdt_set_timeout(wdev);
+	omap_wdt_set_timeout(wdev);	// set adjust timer_margin
 	am335x_wdt_set_before_interrupt(wdev);
 	omap_wdt_enable(wdev);
 
