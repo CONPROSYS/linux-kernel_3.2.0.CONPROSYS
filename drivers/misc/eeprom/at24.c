@@ -65,6 +65,8 @@ struct at24_data {
 	struct mutex lock;
 	struct bin_attribute bin;
 
+	struct bin_attribute user;
+
 	u8 *writebuf;
 	unsigned write_max;
 	unsigned num_addresses;
@@ -315,6 +317,16 @@ static ssize_t at24_bin_read(struct file *filp, struct kobject *kobj,
 	return at24_read(at24, buf, off, count);
 }
 
+static ssize_t at24_user_bin_read(struct file *filp, struct kobject *kobj,
+		struct bin_attribute *attr,
+		char *buf, loff_t off, size_t count)
+{
+	struct at24_data *at24;
+
+	at24 = dev_get_drvdata(container_of(kobj, struct device, kobj));
+	return at24_read(at24, buf, off + 4096, count);
+}
+
 
 /*
  * Note that if the hardware write-protect pin is pulled high, the whole
@@ -435,6 +447,16 @@ static ssize_t at24_bin_write(struct file *filp, struct kobject *kobj,
 
 	at24 = dev_get_drvdata(container_of(kobj, struct device, kobj));
 	return at24_write(at24, buf, off, count);
+}
+
+static ssize_t at24_user_bin_write(struct file *filp, struct kobject *kobj,
+		struct bin_attribute *attr,
+		char *buf, loff_t off, size_t count)
+{
+	struct at24_data *at24;
+
+	at24 = dev_get_drvdata(container_of(kobj, struct device, kobj));
+	return at24_write(at24, buf, off + 4096, count);
 }
 
 /*-------------------------------------------------------------------------*/
@@ -610,6 +632,13 @@ static int at24_find_devices(struct i2c_client *client, const struct i2c_device_
 		memset(&client->name[0], 0x00, sizeof(client->name));
 		strncpy(client->name, at24_ids[cnt_s].name, strlen(at24_ids[cnt_s].name));
 		at24->client[0] = client;
+
+		if( at24->bin.size >= 8192 ){
+			at24->user.size = at24->bin.size - 4096;
+			sysfs_create_bin_file(&client->dev.kobj, &at24->user);
+		}
+
+
 	}
 
 	return 0;
@@ -715,6 +744,14 @@ static int at24_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	at24->macc.read = at24_macc_read;
 
+	if( chip.byte_len >= 8192 ){
+		sysfs_bin_attr_init(&at24->user);
+		at24->user.attr.name = "user";
+		at24->user.attr.mode = chip.flags & AT24_FLAG_IRUGO ? S_IRUGO : S_IRUSR;
+		at24->user.read = at24_user_bin_read;
+		at24->user.size = chip.byte_len - 4096;
+	}
+
 	writable = !(chip.flags & AT24_FLAG_READONLY);
 	if (writable) {
 		if (!use_smbus || i2c_check_functionality(client->adapter,
@@ -726,6 +763,11 @@ static int at24_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 			at24->bin.write = at24_bin_write;
 			at24->bin.attr.mode |= S_IWUSR;
+
+			if( chip.byte_len >= 8192 ){
+				at24->user.write = at24_user_bin_write;
+				at24->user.attr.mode |= S_IWUSR;
+			}
 
 			if (write_max > io_limit)
 				write_max = io_limit;
@@ -813,6 +855,10 @@ static int __devexit at24_remove(struct i2c_client *client)
 
 	at24 = i2c_get_clientdata(client);
 	sysfs_remove_bin_file(&client->dev.kobj, &at24->bin);
+
+	if( at24->user.size > 0){
+		sysfs_remove_bin_file(&client->dev.kobj, &at24->user);
+	}
 
 	for (i = 1; i < at24->num_addresses; i++)
 		i2c_unregister_device(at24->client[i]);
