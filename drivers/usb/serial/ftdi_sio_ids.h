@@ -638,6 +638,12 @@
 #define RATOC_PRODUCT_ID_SCU18	0xb03a
 
 /*
+      Omron Corp.(https://www.ia.omron.com/)
+*/
+#define OMRON_VID		0x0590
+#define OMRON_2JCIE_BU     0x00D4 /* Environment Sensor 2JCIE-BU */
+
+/*
  * Acton Research Corp.
  */
 #define ACTON_VID		0x0647	/* Vendor ID */
@@ -647,10 +653,10 @@
  * Contec products (https://www.contec.com)
  * Submitted by Daniel Sangorrin
  */
-#define CONTEC_VID		0x06CE	/* Vendor ID */
-#define CONTEC_COM1USBH_PID	0x8311	/* COM-1(USB)H */
-#define CONTEC_COM1PUSBH_PID	0x8321	/* COM-1P(USB)H */
-#define CONTEC_COM1PDUSBH_PID	0x8331	/* COM-1PD(USB)H */
+#define CONTEC_VID		0x06CE	/* CONTEC Vendor ID */
+#define CONTEC_COM1USBH_PID	0x8311	/* USB to RS232C Converter COM-1(USB)H */
+#define CONTEC_COM1PUSBH_PID	0x8321	/* USB to Isolated RS232C Converter COM-1P(USB)H */
+#define CONTEC_COM1PDUSBH_PID	0x8331	/* USB to Isolated RS422/485 Converter COM-1PD(USB)H */
 /*
  * Mitsubishi Electric Corp. (http://www.meau.com)
  * Submitted by Konstantin Holoborodko
