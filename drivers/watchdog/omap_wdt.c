@@ -301,12 +301,17 @@ static ssize_t omap_wdt_write(struct file *file, const char __user *data,
 	unsigned int count = 0;
 
 	if (len) {
-		if( len == 1 &&
-			!memcmp(&data[0], &stop_watchdog_code, 1) &&
+		dev_info(wdev->dev, "len=%d data=%s enable=%d \n",len, data,  wdev->enable);
+		if(	!memcmp(&data[0], &stop_watchdog_code, 1) &&
 			wdev->enable == 1 
 		){
+			// echo V > /dev/watchdog : len = 2 data=V
+			// echo "V" > /dev/watchdog : len = 2 data=V			
+			// echo -n V > /dev/watchdog : len = 1 data=V
 			pm_runtime_get_sync(wdev->dev);
+			spin_lock(&wdt_lock);			
 			omap_wdt_disable(wdev);
+			spin_unlock(&wdt_lock);			
 			pm_runtime_put_sync(wdev->dev);
 		}
 		else{
@@ -359,7 +364,9 @@ static long omap_wdt_ioctl(struct file *file, unsigned int cmd,
 	// Add disable WDT function 
 	case WDIOC_DISABLE:
 		pm_runtime_get_sync(wdev->dev);
+		spin_lock(&wdt_lock);
 		omap_wdt_disable(wdev);
+		spin_unlock(&wdt_lock);
 		pm_runtime_put_sync(wdev->dev);
 		return 0;
 
